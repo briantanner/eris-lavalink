@@ -1,0 +1,23 @@
+{
+  "name": "eris-lavalink",
+  "version": "0.1.0",
+  "homepage": "https://github.com/briantanner/eris-lavalink",
+  "author": {
+    "name": "Brian Tanner",
+    "email": "brian@tanner.io"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/briantanner/eris-lavalink.git"
+  },
+  "bugs": {
+    "url": "https://github.com/briantanner/eris-lavalink/issues"
+  },
+  "private": true,
+  "main": "src/index.js",
+  "engineStrict": true,
+  "dependencies": {
+    "eris": "github:abalabahaha/eris#dev",
+    "ws": "^3.1.0"
+  }
+}

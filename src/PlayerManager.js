@@ -2,20 +2,20 @@
  * Created by Julian & NoobLance on 25.05.2017.
  * DISCLAIMER: We reuse a lot of eris code, since we only need to do small modifications to enable our code to work
  */
-const Collection = require('eris').Collection;
-const VoiceNode = require('./VoiceNode');
+const { Collection, Constants } = require('eris');
+const Lavalink = require('./Lavalink');
 const Player = require('./Player');
 
 /**
  * Drop in Replacement for the eris voice connection manager
  */
-class VoiceConnectionManager extends Collection {
+class PlayerManager extends Collection {
     /**
      *
      * @param {Object} options Options for stuff
      */
     constructor(client, nodes, options) {
-        super(Player);
+        super(options.player || Player);
 
         this.client = client;
         this.nodes = new Map();
@@ -23,14 +23,14 @@ class VoiceConnectionManager extends Collection {
         this.options = options;
 
         for (let node of nodes) {
-            this.createNode(node, options);
+            this.createNode(Object.assign({}, node, options));
         }
     }
 
-    createNode(nodeOptions, options) {
-        let node = new VoiceNode({
-            host: nodeOptions.host,
-            region: nodeOptions.region,
+    createNode(options) {
+        let node = new Lavalink({
+            host: options.host,
+            region: options.region,
             numShards: options.numShards,
             userId: options.userId,
         });
@@ -39,7 +39,7 @@ class VoiceConnectionManager extends Collection {
         node.on('disconnect', this.onDisconnect.bind(this, node));
         node.on('message', this.onMessage.bind(this, node));
 
-        this.nodes.set(nodeOptions.host, node);
+        this.nodes.set(options.host, node);
     }
 
     onError(node, err) {
@@ -47,10 +47,8 @@ class VoiceConnectionManager extends Collection {
     }
 
     onDisconnect(node, msg) {
-        console.log('Disconnected from voice node');
-        if (msg) {
-            console.log(msg);
-        }
+        node.emit('disconnect', msg);
+        node.updateVoiceState(null, false, false);
     }
 
     onMessage(node, message) {
@@ -91,73 +89,71 @@ class VoiceConnectionManager extends Collection {
             }
             case 'sendWS': {
                 let shard = this.client.shards.get(message.shardId);
-                if (!shard) return;
+                if (shard === undefined) return;
 
                 const payload = JSON.parse(message.message);
 
                 return shard.sendWS(payload.op, payload.d);
             }
             case 'playerUpdate': {
-                let connection = this.get(message.guildId);
-                if (!connection) return;
+                let player = this.get(message.guildId);
+                if (!player) return;
 
-                return connection.stateUpdate(message.state);
+                return player.stateUpdate(message.state);
             }
             case 'event': {
-                let connection = this.get(message.guildId);
-                if (!connection) return;
+                let player = this.get(message.guildId);
+                if (!player) return;
 
                 switch (message.type) {
                     case 'TrackEndEvent':
-                        return connection.onTrackEnd(message);
+                        return player.onTrackEnd(message);
                     case 'TrackExceptionEvent':
-                        return connection.onTrackException(message);
+                        return player.onTrackException(message);
                     case 'TrackStuckEvent':
-                        return connection.onTrackStuck(message);
+                        return player.onTrackStuck(message);
                     default:
-                        return connection.emit('warn', `Unexpected event type: ${message.type}`);
+                        return player.emit('warn', `Unexpected event type: ${message.type}`);
                 }
             }
         }
     }
 
-    async join(guildID, channelID, options) {
+    async join(guildId, channelId, options) {
         return new Promise((res, rej) => {
-            console.log(guildID);
-            let connection = this.get(guildID);
-            if (connection) {
-                connection.switchChannel(channelID);
-                res(connection);
+            let player = this.get(guildId);
+            if (player) {
+                player.switchChannel(channelId);
+                res(player);
             }
-            this.pendingGuilds[guildID] = {
-                channelID: channelID,
+            this.pendingGuilds[guildId] = {
+                channelId: channelId,
                 options: options || {},
                 res: res,
                 rej: rej,
                 timeout: setTimeout(() => {
-                    delete this.pendingGuilds[guildID];
+                    delete this.pendingGuilds[guildId];
                     rej(new Error('Voice connection timeout'));
                 }, 10000),
             };
         });
     }
 
-    async leave(guildID) {
-        let connection = this.get(guildID);
-        if (!connection) {
+    async leave(guildId) {
+        let player = this.get(guildId);
+        if (!player) {
             return;
         }
-        connection.disconnect();
-        this.remove(connection);
+        player.disconnect();
+        this.remove(player);
         let data = {
             t: 'voiceDisconnect',
             d: {
-                guild_id: guildID,
-                channel_id: connection.channelID,
-                node_id: `${connection.region}:${connection.nodeID}`,
+                guild_id: guildId,
+                channel_id: player.channelId,
+                node_id: `${player.region}:${player.nodeID}`,
             }
         };
-        await this.client.publishAsync(`${this.prefix}`, JSON.stringify(data));
     }
 
     async findIdealNode() {
@@ -171,8 +167,8 @@ class VoiceConnectionManager extends Collection {
             this.pendingGuilds[data.guild_id].timeout = null;
         }
 
-        let connection = this.get(data.guild_id);
-        if (!connection) {
+        let player = this.get(data.guild_id);
+        if (!player) {
             if (!this.pendingGuilds[data.guild_id]) {
                 return;
             }
@@ -180,20 +176,20 @@ class VoiceConnectionManager extends Collection {
             let region = this.getRegionFromData(data.endpoint);
             let voiceNode = await this.findIdealNode(region);
 
-            connection = this.add(new this.baseObject(data.guild_id, {
+            player = this.add(new this.baseObject(data.guild_id, {
                 shard: data.shard,
-                guildID: data.guild_id,
+                guildId: data.guild_id,
                 sessionID: data.session_id,
-                channelID: this.pendingGuilds[data.guild_id].channelID,
+                channelId: this.pendingGuilds[data.guild_id].channelId,
                 hostname: this.pendingGuilds[data.guild_id].hostname,
                 node: voiceNode,
                 event: data,
             }));
 
-            connection.connect({
+            player.connect({
                 sessionID: data.session_id,
-                guildID: data.guild_id,
-                channelID: this.pendingGuilds[data.guild_id].channelID,
+                guildId: data.guild_id,
+                channelId: this.pendingGuilds[data.guild_id].channelId,
                 event: {
                     endpoint: data.endpoint,
                     guild_id: data.guild_id,
@@ -209,36 +205,35 @@ class VoiceConnectionManager extends Collection {
         this.pendingGuilds[data.guild_id].waiting = true;
 
         let disconnectHandler = () => {
-            connection = this.get(data.guild_id);
+            player = this.get(data.guild_id);
             if (!this.pendingGuilds[data.guild_id]) {
-                if (connection) {
-                    connection.removeListener('ready', readyHandler);
+                if (player) {
+                    player.removeListener('ready', readyHandler);
                 }
                 return;
             }
-            connection.removeListener('ready', readyHandler);
+            player.removeListener('ready', readyHandler);
             this.pendingGuilds[data.guild_id].rej(new Error('Disconnected'));
             delete this.pendingGuilds[data.guild_id];
         };
 
         let readyHandler = () => {
-            connection = this.get(data.guild_id);
+            player = this.get(data.guild_id);
             if (!this.pendingGuilds[data.guild_id]) {
-                if (connection) {
-                    connection.removeListener('disconnect', disconnectHandler);
+                if (player) {
+                    player.removeListener('disconnect', disconnectHandler);
                 }
                 return;
             }
-            connection.removeListener('disconnect', disconnectHandler);
-            this.pendingGuilds[data.guild_id].res(connection);
+            player.removeListener('disconnect', disconnectHandler);
+            this.pendingGuilds[data.guild_id].res(player);
             delete this.pendingGuilds[data.guild_id];
         };
 
-        connection.once('ready', readyHandler).once('disconnect', disconnectHandler);
+        player.once('ready', readyHandler).once('disconnect', disconnectHandler);
     }
 
     getRegionFromData(endpoint) {
-        console.log(endpoint);
         if (endpoint.startsWith('eu')) {
             return 'eu';
         }
@@ -260,8 +255,8 @@ class VoiceConnectionManager extends Collection {
         if (endpoint.startsWith('sydney')) {
             return 'asia';
         }
-        return 'eu';
+        return this.options.defaultRegion || 'us';
     }
 }
 
-module.exports = VoiceConnectionManager;
+module.exports = PlayerManager;

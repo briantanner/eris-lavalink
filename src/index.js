@@ -1,11 +1,11 @@
 'use strict';
 
 const Player = require('./Player');
-const VoiceConnectionManager = require('./VoiceConnectionManager');
-const VoiceNode = require('./VoiceNode');
+const PlayerManager = require('./PlayerManager');
+const Lavalink = require('./Lavalink');
 
 module.exports = {
 	Player,
-	VoiceConnectionManager,
-	VoiceNode,
+	PlayerManager,
+	Lavalink,
 };

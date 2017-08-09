@@ -11,10 +11,10 @@ try {
 }
 
 /**
- * @class VoiceNode
+ * @class Lavalink
  * @extends EventEmitter
  */
-class VoiceNode extends EventEmitter {
+class Lavalink extends EventEmitter {
 	constructor(options) {
 		super();
 
@@ -24,7 +24,7 @@ class VoiceNode extends EventEmitter {
 		this.numShards = options.numShards;
 		this.reconnectTimeout = options.timeout || 30000;
 		this.reconnectInterval = null;
-		this.stats = {};
+		this.stats = { players: 0, playingPlayers: 0 };
 
 		this.connect();
 	}
@@ -118,4 +118,4 @@ class VoiceNode extends EventEmitter {
 	}
 }
 
-module.exports = VoiceNode;
+module.exports = Lavalink;

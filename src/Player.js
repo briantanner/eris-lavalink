@@ -12,20 +12,18 @@ try {
 }
 
 class Player extends EventEmitter {
-    constructor(id, { hostname, guildID, channelID, shard, node }) {
+    constructor(id, { hostname, guildId, channelId, shard, node }) {
         super();
         this.id = id;
         this.node = node;
         this.hostname = hostname;
-        this.guildID = guildID;
-        this.channelID = channelID;
-        this.timestamp = 0;
+        this.guildId = guildId;
+        this.channelId = channelId;
         this.ready = false;
         this.playing = false;
         this.shard = shard;
         this.state = {};
         // this.region = region;
-        // this.prefix = prefix;
         this.receivedEvents = [];
         this.sendQueue = [];
     }
@@ -55,35 +53,26 @@ class Player extends EventEmitter {
 
         this.queueEvent({
             op: 'connect',
-            guildId: data.guildID,
-            channelId: data.channelID,
+            guildId: data.guildId,
+            channelId: data.channelId,
         });
 
         this.queueEvent({
             op: 'voiceUpdate',
-            guildId: data.guildID,
+            guildId: data.guildId,
             sessionId: data.sessionID,
             event: data.event,
         });
+
+        process.nextTick(() => this.emit('ready'));
     }
 
     async disconnect(msg) {
         console.log('==== DISCONNECTED ====');
-        if (msg) {
-            console.log(msg);
-        }
-        this.channelID = null;
+        this.channelId = null;
+        this.queueEvent({ op: 'disconnect', guildId: this.guildId });
         this.updateVoiceState();
-        this.emit('disconnect');
-    }
-
-    reconnect() {
-        // this.shard.sendWS(Constants.GatewayOPCodes.VOICE_STATE_UPDATE, {
-        //     guild_id: this.id,
-        //     channel_id: this.channelID || null,
-        //     self_mute: false,
-        //     self_deaf: false,
-        // });
+        this.emit('disconnect', msg);
     }
 
     stateUpdate(state) {
@@ -93,35 +82,33 @@ class Player extends EventEmitter {
     play(track, options) {
         let payload = Object.assign({
             op: 'play',
-            guildId: this.guildID,
+            guildId: this.guildId,
             track: track,
         }, options);
 
-        this.node.send(payload);
-
+        this.queueEvent(payload);
         this.playing = true;
         this.timestamp = Date.now();
     }
 
     stop() {
-        if (!this.playing) {
-            let data = {
-                op: 'stop',
-                guildId: this.guildID,
-            };
+        // if (!this.playing) {
+        let data = {
+            op: 'stop',
+            guildId: this.guildId,
+        };
 
-            this.queueEvent(data);
-            this.playing = false;
-            this.resetTimer();
-        } else {
-            console.error('already stopped playing');
-        }
+        this.queueEvent(data);
+        this.playing = false;
+        // } else {
+        //     console.error('already stopped playing');
+        // }
     }
 
     setPause(pause) {
         this.node.send({
             op: 'pause',
-            guildId: this.guildID,
+            guildId: this.guildId,
             pause: pause,
         });
     }
@@ -129,7 +116,7 @@ class Player extends EventEmitter {
     seek(position) {
         this.node.send({
             op: 'seek',
-            guildId: this.guildID,
+            guildId: this.guildId,
             position: position,
         });
     }
@@ -137,7 +124,7 @@ class Player extends EventEmitter {
     setVolume(volume) {
         this.node.send({
             op: 'volume',
-            guildId: this.guildID,
+            guildId: this.guildId,
             volume: volume,
         });
     }
@@ -146,7 +133,6 @@ class Player extends EventEmitter {
         console.log('end');
         console.log(message);
         this.playing = false;
-        this.resetTimer();
         this.emit('end');
     }
 
@@ -155,18 +141,15 @@ class Player extends EventEmitter {
         console.log(message);
         this.emit('error', message);
     }
+
     onTrackStuck(message) {
         console.log('stuck');
         console.log(message);
         this.emit('stuck', message);
     }
 
-    resetTimer() {
-        this.timestamp = 0;
-    }
-
-    async switchChannel(channelID, reactive) {
-        this.channelID = channelID;
+    async switchChannel(channelId, reactive) {
+        this.channelId = channelId;
         if (!reactive) {
             this.updateVoiceState();
         }
@@ -181,11 +164,11 @@ class Player extends EventEmitter {
      * @arg {Boolean} selfMute Whether the bot muted itself or not (audio sending is unaffected)
      * @arg {Boolean} selfDeaf Whether the bot deafened itself or not (audio receiving is unaffected)
      */
-    updateVoiceState(selfMute, selfDeaf) {
+    updateVoiceState(channelId, selfMute, selfDeaf) {
         if (this.shard.sendWS) {
             this.shard.sendWS(Constants.GatewayOPCodes.VOICE_STATE_UPDATE, {
                 guild_id: this.id === 'call' ? null : this.id,
-                channel_id: this.channelID || null,
+                channel_id: channelId || null,
                 self_mute: !!selfMute,
                 self_deaf: !!selfDeaf,
             });

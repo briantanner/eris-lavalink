@@ -22,7 +22,9 @@ class Lavalink extends EventEmitter {
 		this.region = options.region;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
-		this.reconnectTimeout = options.timeout || 30000;
+		this.connected = false;
+		this.retries = 0;
+		this.reconnectTimeout = options.timeout || 5000;
 		this.reconnectInterval = null;
 		this.stats = { players: 0, playingPlayers: 0 };
 
@@ -34,6 +36,7 @@ class Lavalink extends EventEmitter {
 	 */
 	connect() {
 		let url = `ws://${this.host}`;
+		this.emit('debug', `[${new Date()}] Attempting to connect to ${url}`);
 		this.ws = new WebSocket(url, {
 			headers: {
 				'Authorization': 'youshallnotpass',
@@ -48,17 +51,23 @@ class Lavalink extends EventEmitter {
 		this.ws.on('error', this.disconnected.bind(this));
 	}
 
+	reconnect() {
+		let interval = this.retryInterval();
+		this.reconnectInterval = setTimeout(this.reconnect.bind(this), interval);
+		this.retries++;
+		this.connect();
+	}
+
 	/**
 	 * Identify
 	 */
 	ready() {
 		if (this.reconnectInterval) {
-			clearInterval(this.reconnectInterval);
-			process.nextTick(() => {
-				this.reconnectInterval = null;
-			});
+			clearTimeout(this.reconnectInterval);
 		}
 
+		this.connected = true;
+		this.retries = 0;
 		this.emit('ready');
 	}
 
@@ -66,6 +75,7 @@ class Lavalink extends EventEmitter {
 	 * Handle disconnect
 	 */
 	disconnected() {
+		this.connected = false;
 		if (!this.reconnectInterval) {
 			this.emit('disconnect');
 		}
@@ -73,8 +83,13 @@ class Lavalink extends EventEmitter {
 		delete this.ws;
 
 		if (!this.reconnectInterval) {
-			this.reconnectInterval = setInterval(this.connect.bind(this), this.reconnectTimeout);
+			this.reconnectInterval = setTimeout(this.reconnect.bind(this), this.reconnectTimeout);
 		}
+	}
+
+	retryInterval() {
+		let retries = Math.min(this.retries-1, 5);
+		return Math.pow(retries + 5, 2) * 1000;
 	}
 
 	/**
@@ -92,8 +107,6 @@ class Lavalink extends EventEmitter {
 			return this.emit('error', 'Unable to stringify payload.');
 		}
 
-		console.log(payload);
-
 		ws.send(payload);
 	}
 
@@ -103,7 +116,6 @@ class Lavalink extends EventEmitter {
 	 * @returns {*|void}
 	 */
 	onMessage(message) {
-		// console.log(message);
 		try {
 			var data = JSON.parse(message);
 		} catch (e) {

@@ -23,6 +23,7 @@ class Player extends EventEmitter {
         this.playing = false;
         this.shard = shard;
         this.state = {};
+        this.track = null;
         // this.region = region;
         this.receivedEvents = [];
         this.sendQueue = [];
@@ -60,7 +61,7 @@ class Player extends EventEmitter {
         this.queueEvent({
             op: 'voiceUpdate',
             guildId: data.guildId,
-            sessionId: data.sessionID,
+            sessionId: data.sessionId,
             event: data.event,
         });
 
@@ -68,8 +69,7 @@ class Player extends EventEmitter {
     }
 
     async disconnect(msg) {
-        console.log('==== DISCONNECTED ====');
-        this.channelId = null;
+        // this.channelId = null;
         this.queueEvent({ op: 'disconnect', guildId: this.guildId });
         this.updateVoiceState();
         this.emit('disconnect', msg);
@@ -80,6 +80,9 @@ class Player extends EventEmitter {
     }
 
     play(track, options) {
+        this.lastTrack = track;
+        this.playOptions = options;
+
         let payload = Object.assign({
             op: 'play',
             guildId: this.guildId,
@@ -130,21 +133,16 @@ class Player extends EventEmitter {
     }
 
     onTrackEnd(message) {
-        console.log('end');
-        console.log(message);
         this.playing = false;
         this.emit('end');
     }
 
     onTrackException(message) {
-        console.log('exception');
-        console.log(message);
         this.emit('error', message);
     }
 
     onTrackStuck(message) {
-        console.log('stuck');
-        console.log(message);
+        this.play(this.lastTrack, { position: (this.state.position || 0) + 2000 });
         this.emit('stuck', message);
     }
 

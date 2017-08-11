@@ -43,12 +43,30 @@ class PlayerManager extends Collection {
     }
 
     onError(node, err) {
-        console.log(err);
+        this.client.emit(err);
     }
 
     onDisconnect(node, msg) {
-        node.emit('disconnect', msg);
-        node.updateVoiceState(null, false, false);
+        let players = this.filter(player => player.node.host === node.host);
+        for (let player of players) {
+            let { guildId, channelId, lastTrack } = player,
+                position = (player.state.position || 0) + (this.options.reconnectThreshold || 2000);
+
+            this.delete(guildId);
+            player.updateVoiceState(null);
+
+            process.nextTick(() => {
+                this.join(guildId, channelId, null, player).then(player => {
+                    player.emit('reconnect');
+                    player.play(lastTrack, { startTime: position });
+                    this.set(guildId, player);
+                })
+                .catch(err => {
+                    player.emit('disconnect', err);
+                    player.updateVoiceState(null);
+                });
+            });
+        }
     }
 
     onMessage(node, message) {
@@ -119,16 +137,22 @@ class PlayerManager extends Collection {
         }
     }
 
-    async join(guildId, channelId, options) {
+    async join(guildId, channelId, options, player) {
         return new Promise((res, rej) => {
-            let player = this.get(guildId);
-            if (player) {
+            player = player || this.get(guildId);
+            if (this.has(guildId)) {
                 player.switchChannel(channelId);
                 res(player);
             }
+
+            if (player) {
+                player.updateVoiceState(channelId);
+            }
+
             this.pendingGuilds[guildId] = {
                 channelId: channelId,
                 options: options || {},
+                player: player || null,
                 res: res,
                 rej: rej,
                 timeout: setTimeout(() => {
@@ -157,7 +181,11 @@ class PlayerManager extends Collection {
     }
 
     async findIdealNode() {
-        let node = [...this.nodes.values()].sort((a, b) => (a.stats.playingPlayers || 0) - (b.stats.playingPlayers || 0));
+        let node = [...this.nodes.values()].filter(node => node.ws && node.connected).sort((a, b) => {
+            let aload = a.stats.cpu ? (a.stats.cpu.systemLoad / a.stats.cpu.cores) * 100 : 0,
+                bload = b.stats.cpu ? (b.stats.cpu.systemLoad / b.stats.cpu.cores) * 100 : 0;
+            return aload - bload;
+        });
         return node[0];
     }
 
@@ -176,10 +204,33 @@ class PlayerManager extends Collection {
             let region = this.getRegionFromData(data.endpoint);
             let voiceNode = await this.findIdealNode(region);
 
-            player = this.add(new this.baseObject(data.guild_id, {
+            player = this.pendingGuilds[data.guild_id].player;
+
+            if (!voiceNode) {
+                if (player) {
+                    player.emit('error', 'No available voice nodes.');
+                    data.shard.sendWS(Constants.GatewayOPCodes.VOICE_STATE_UPDATE, {
+                        guild_id: data.guild_id,
+                        channel_id: null,
+                        self_mute: false,
+                        self_deaf: false,
+                    });
+                }
+                return this.pendingGuilds[data.guild_id].rej('No available voice nodes.');
+            }
+
+            if (player) {
+                player.sessionId = data.sessionId;
+                player.hostname = this.pendingGuilds[data.guild_id].hostname;
+                player.node = voiceNode,
+                player.event = data;
+                this.set(data.guild_id, player);
+            }
+
+            player = player || this.add(new this.baseObject(data.guild_id, {
                 shard: data.shard,
                 guildId: data.guild_id,
-                sessionID: data.session_id,
+                sessionId: data.session_id,
                 channelId: this.pendingGuilds[data.guild_id].channelId,
                 hostname: this.pendingGuilds[data.guild_id].hostname,
                 node: voiceNode,
@@ -187,7 +238,7 @@ class PlayerManager extends Collection {
             }));
 
             player.connect({
-                sessionID: data.session_id,
+                sessionId: data.session_id,
                 guildId: data.guild_id,
                 channelId: this.pendingGuilds[data.guild_id].channelId,
                 event: {
@@ -197,12 +248,6 @@ class PlayerManager extends Collection {
                 },
             });
         }
-
-        if (!this.pendingGuilds[data.guild_id] || this.pendingGuilds[data.guild_id].waiting) {
-            return;
-        }
-
-        this.pendingGuilds[data.guild_id].waiting = true;
 
         let disconnectHandler = () => {
             player = this.get(data.guild_id);
@@ -234,6 +279,8 @@ class PlayerManager extends Collection {
     }
 
     getRegionFromData(endpoint) {
+        endpoint = endpoint.replace('vip-', '');
+
         if (endpoint.startsWith('eu')) {
             return 'eu';
         }

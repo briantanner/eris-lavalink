@@ -27,6 +27,7 @@ class Lavalink extends EventEmitter {
 		this.reconnectTimeout = options.timeout || 5000;
 		this.reconnectInterval = null;
 		this.stats = { players: 0, playingPlayers: 0 };
+		this.disconnectHandler = this.disconnected.bind(this);
 
 		this.connect();
 	}
@@ -47,8 +48,10 @@ class Lavalink extends EventEmitter {
 
 		this.ws.on('open', this.ready.bind(this));
 		this.ws.on('message', this.onMessage.bind(this));
-		this.ws.on('close', this.disconnected.bind(this));
-		this.ws.on('error', this.disconnected.bind(this));
+		this.ws.on('close', this.disconnectHandler);
+		this.ws.on('error', (err) => {
+			this.emit('error', err);
+		});
 	}
 
 	reconnect() {
@@ -56,6 +59,11 @@ class Lavalink extends EventEmitter {
 		this.reconnectInterval = setTimeout(this.reconnect.bind(this), interval);
 		this.retries++;
 		this.connect();
+	}
+
+	destroy() {
+		this.ws.removeListener('close', this.disconnectHandler);
+		this.ws.close();
 	}
 
 	/**

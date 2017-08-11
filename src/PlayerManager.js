@@ -42,6 +42,14 @@ class PlayerManager extends Collection {
         this.nodes.set(options.host, node);
     }
 
+    removeNode(host) {
+        let node = this.nodes.get(host);
+        if (!host) return;
+        node.destroy();
+        this.nodes.delete(host);
+        this.onDisconnect(node);
+    }
+
     onError(node, err) {
         this.client.emit(err);
     }

@@ -120,9 +120,10 @@ class PlayerManager extends Collection {
             case 'sendWS': {
                 let shard = this.client.shards.get(message.shardId);
                 if (shard === undefined) return;
-
                 const payload = JSON.parse(message.message);
-
+                if (payload.op === 4 && payload.d.channel_id === null) {
+                    this.delete(payload.d.guild_id);
+                }
                 return shard.sendWS(payload.op, payload.d);
             }
             case 'playerUpdate': {

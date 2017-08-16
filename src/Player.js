@@ -63,7 +63,7 @@ class Player extends EventEmitter {
     }
 
     async disconnect(msg) {
-        // this.channelId = null;
+        this.playing = false;
         this.queueEvent({ op: 'disconnect', guildId: this.guildId });
         this.emit('disconnect', msg);
     }
@@ -132,7 +132,7 @@ class Player extends EventEmitter {
 
     onTrackEnd(message) {
         this.playing = false;
-        this.emit('end');
+        this.emit('end', message);
     }
 
     onTrackException(message) {

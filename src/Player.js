@@ -12,13 +12,14 @@ try {
 }
 
 class Player extends EventEmitter {
-    constructor(id, { hostname, guildId, channelId, shard, node }) {
+    constructor(id, { hostname, guildId, channelId, shard, node, manager }) {
         super();
         this.id = id;
         this.node = node;
         this.hostname = hostname;
         this.guildId = guildId;
         this.channelId = channelId;
+        this.manager = manager || null;
         this.ready = false;
         this.playing = false;
         this.shard = shard;
@@ -51,13 +52,6 @@ class Player extends EventEmitter {
 
     connect(data) {
         this.emit('connect');
-
-        this.queueEvent({
-            op: 'connect',
-            guildId: data.guildId,
-            channelId: data.channelId,
-        });
-
         this.queueEvent({
             op: 'voiceUpdate',
             guildId: data.guildId,
@@ -71,7 +65,6 @@ class Player extends EventEmitter {
     async disconnect(msg) {
         // this.channelId = null;
         this.queueEvent({ op: 'disconnect', guildId: this.guildId });
-        this.updateVoiceState();
         this.emit('disconnect', msg);
     }
 
@@ -82,6 +75,11 @@ class Player extends EventEmitter {
     play(track, options) {
         this.lastTrack = track;
         this.playOptions = options;
+
+        if (this.node.draining) {
+            this.state.position = 0;
+            return this.manager.movePlayer(this);
+        }
 
         let payload = Object.assign({
             op: 'play',
@@ -146,11 +144,8 @@ class Player extends EventEmitter {
         this.emit('stuck', message);
     }
 
-    async switchChannel(channelId, reactive) {
+    async switchChannel(channelId) {
         this.channelId = channelId;
-        if (!reactive) {
-            this.updateVoiceState();
-        }
     }
 
     getTimestamp() {

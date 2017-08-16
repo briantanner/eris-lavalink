@@ -23,6 +23,7 @@ class Lavalink extends EventEmitter {
 		this.userId = options.userId;
 		this.numShards = options.numShards;
 		this.connected = false;
+		this.draining = false;
 		this.retries = 0;
 		this.reconnectTimeout = options.timeout || 5000;
 		this.reconnectInterval = null;

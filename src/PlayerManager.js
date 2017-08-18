@@ -25,6 +25,9 @@ class PlayerManager extends Collection {
         for (let node of nodes) {
             this.createNode(Object.assign({}, node, options));
         }
+
+        this.shardReadyListener = this.shardReady.bind(this);
+        this.client.on('shardReady', this.shardReadyListener);
     }
 
     createNode(options) {
@@ -57,21 +60,51 @@ class PlayerManager extends Collection {
     onDisconnect(node, msg) {
         let players = this.filter(player => player.node.host === node.host);
         for (let player of players) {
-            this.movePlayer(player);
+            this.switchNode(player, true);
         }
     }
 
-    movePlayer(player) {
+    shardReady(id) {
+        let players = this.filter(player => player.shard && player.shard.id === id);
+        for (let player of players) {
+            this.switchNode(player);
+        }
+    }
+
+    switchNode(player, leave) {
         let { guildId, channelId, lastTrack } = player,
             position = (player.state.position || 0) + (this.options.reconnectThreshold || 2000);
 
+        let listeners = player.listeners('end'),
+            endListeners = [];
+
+        if (listeners && listeners.length) {
+            for (let listener of listeners) {
+                endListeners.push(listener);
+                player.removeListener('end', listener);
+            }
+        }
+
         this.delete(guildId);
-        player.updateVoiceState(null);
+
+        player.playing = false;
+
+        if (leave) {
+            console.log('leaving on our side');
+            player.updateVoiceState(null);
+        } else {
+            player.node.send({ op: 'disconnect', guildId: guildId });
+        }
 
         process.nextTick(() => {
             this.join(guildId, channelId, null, player).then(player => {
-                player.emit('reconnect');
                 player.play(lastTrack, { startTime: position });
+                player.emit('reconnect');
+                player.once('end', () => {
+                    for (let listener of endListeners) {
+                        player.on('end', listener);
+                    }
+                });
                 this.set(guildId, player);
             })
             .catch(err => {
@@ -120,6 +153,7 @@ class PlayerManager extends Collection {
             case 'sendWS': {
                 let shard = this.client.shards.get(message.shardId);
                 if (shard === undefined) return;
+                if (!shard.ready) return;
                 const payload = JSON.parse(message.message);
                 if (payload.op === 4 && payload.d.channel_id === null) {
                     this.delete(payload.d.guild_id);
@@ -157,10 +191,6 @@ class PlayerManager extends Collection {
         if (this.has(guildId)) {
             player.switchChannel(channelId);
             return Promise.resolve(player);
-        }
-
-        if (player) {
-            player.updateVoiceState(channelId);
         }
 
         let region = this.getRegionFromData(options.region || 'us');

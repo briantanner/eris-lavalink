@@ -78,7 +78,7 @@ class Player extends EventEmitter {
 
         if (this.node.draining) {
             this.state.position = 0;
-            return this.manager.movePlayer(this);
+            return this.manager.switchNode(this);
         }
 
         let payload = Object.assign({

@@ -25,14 +25,15 @@ class Player extends EventEmitter {
         this.shard = shard;
         this.state = {};
         this.track = null;
-        // this.region = region;
         this.receivedEvents = [];
         this.sendQueue = [];
+        this.timestamp = Date.now();
     }
 
     checkEventQueue() {
         if (this.sendQueue.length > 0) {
-            this.sendEvent(this.sendQueue[0]);
+            let event = this.sendQueue.splice(0,1);
+            this.sendEvent(event[0]);
         }
     }
 
@@ -68,10 +69,6 @@ class Player extends EventEmitter {
         this.emit('disconnect', msg);
     }
 
-    stateUpdate(state) {
-        this.state = state;
-    }
-
     play(track, options) {
         this.lastTrack = track;
         this.playOptions = options;
@@ -104,6 +101,10 @@ class Player extends EventEmitter {
         // } else {
         //     console.error('already stopped playing');
         // }
+    }
+
+    stateUpdate(state) {
+        this.state = state;
     }
 
     setPause(pause) {

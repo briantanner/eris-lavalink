@@ -18,9 +18,20 @@ class PlayerManager extends Collection {
         super(options.player || Player);
 
         this.client = client;
-        this.nodes = new Map();
+        this.nodes = new Collection();
         this.pendingGuilds = {};
-        this.options = options;
+        this.options = options || {};
+        this.failoverQueue = [];
+        this.failoverRate = options.failoverRate || 250;
+        this.failoverLimit = options.failoverLimit || 1;
+
+        this.defaultRegions = {
+            asia: ['hongkong', 'singapore', 'sydney'],
+            eu: ['eu', 'amsterdam', 'frankfurt', 'russia'],
+            us: ['us', 'brazil'],
+        };
+
+        this.regions = options.regions || this.defaultRegions;
 
         for (let node of nodes) {
             this.createNode(Object.assign({}, node, options));
@@ -57,17 +68,39 @@ class PlayerManager extends Collection {
         this.client.emit(err);
     }
 
+    checkFailoverQueue() {
+        if (this.failoverQueue.length > 0) {
+            let events = this.failoverQueue.splice(0, this.failoverLimit);
+            for (let event of events) {
+                this.processQueue(event);
+            }
+        }
+    }
+
+    queueFailover(fn) {
+        if (this.failoverQueue.length > 0) {
+            this.failoverQueue.push(fn);
+        } else {
+            return this.processQueue(fn);
+        }
+    }
+
+    async processQueue(fn) {
+        fn();
+        setTimeout(() => this.checkFailoverQueue(), this.failoverRate);
+    }
+
     onDisconnect(node, msg) {
         let players = this.filter(player => player.node.host === node.host);
         for (let player of players) {
-            this.switchNode(player, true);
+            this.queueFailover(this.switchNode.bind(this, player, true));
         }
     }
 
     shardReady(id) {
         let players = this.filter(player => player.shard && player.shard.id === id);
         for (let player of players) {
-            this.switchNode(player);
+            this.queueFailover(player);
         }
     }
 
@@ -85,12 +118,17 @@ class PlayerManager extends Collection {
             }
         }
 
+        player.once('end', () => {
+            for (let listener of endListeners) {
+                player.on('end', listener);
+            }
+        });
+
         this.delete(guildId);
 
         player.playing = false;
 
         if (leave) {
-            console.log('leaving on our side');
             player.updateVoiceState(null);
         } else {
             player.node.send({ op: 'disconnect', guildId: guildId });
@@ -100,11 +138,6 @@ class PlayerManager extends Collection {
             this.join(guildId, channelId, null, player).then(player => {
                 player.play(lastTrack, { startTime: position });
                 player.emit('reconnect');
-                player.once('end', () => {
-                    for (let listener of endListeners) {
-                        player.on('end', listener);
-                    }
-                });
                 this.set(guildId, player);
             })
             .catch(err => {
@@ -188,7 +221,7 @@ class PlayerManager extends Collection {
         options = options || {};
 
         player = player || this.get(guildId);
-        if (this.has(guildId)) {
+        if (player && player.channelId !== channelId) {
             player.switchChannel(channelId);
             return Promise.resolve(player);
         }
@@ -230,18 +263,17 @@ class PlayerManager extends Collection {
         }
         player.disconnect();
         this.remove(player);
-        let data = {
-            t: 'voiceDisconnect',
-            d: {
-                guild_id: guildId,
-                channel_id: player.channelId,
-                node_id: `${player.region}:${player.nodeID}`,
-            }
-        };
     }
 
-    async findIdealNode() {
+    async findIdealNode(region) {
         let nodes = [...this.nodes.values()].filter(node => !node.draining && node.ws && node.connected);
+
+        if (region) {
+            let regionalNodes = nodes.filter(node => node.region === region);
+            if (regionalNodes && regionalNodes.length) {
+                nodes = regionalNodes;
+            }
+        }
 
         nodes = nodes.sort((a, b) => {
             let aload = a.stats.cpu ? (a.stats.cpu.systemLoad / a.stats.cpu.cores) * 100 : 0,
@@ -281,6 +313,7 @@ class PlayerManager extends Collection {
                 hostname: this.pendingGuilds[data.guild_id].hostname,
                 node: this.pendingGuilds[data.guild_id].node,
                 event: data,
+                manger: this,
             }));
 
             player.connect({
@@ -329,27 +362,17 @@ class PlayerManager extends Collection {
 
         endpoint = endpoint.replace('vip-', '');
 
-        if (endpoint.startsWith('eu')) {
-            return 'eu';
+        for (let key in this.regions) {
+            let nodes = this.nodes.filter(n => n.region === key);
+            if (!nodes || !nodes.length) continue;
+            if (!nodes.find(n => n.connected && !n.draining)) continue;
+            for (let region of this.regions[key]) {
+                if (endpoint.startsWith(region)) {
+                    return key;
+                }
+            }
         }
-        if (endpoint.startsWith('us')) {
-            return 'us';
-        }
-        if (endpoint.startsWith('hongkong')) {
-            return 'asia';
-        }
-        if (endpoint.startsWith('singapore')) {
-            return 'asia';
-        }
-        if (endpoint.startsWith('russia')) {
-            return 'eu';
-        }
-        if (endpoint.startsWith('brazil')) {
-            return 'us';
-        }
-        if (endpoint.startsWith('sydney')) {
-            return 'asia';
-        }
+
         return this.options.defaultRegion || 'us';
     }
 }

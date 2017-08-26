@@ -19,7 +19,7 @@ class Lavalink extends EventEmitter {
 		super();
 
 		this.host = options.host;
-		this.region = options.region;
+		this.region = options.region || null;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
 		this.connected = false;
@@ -63,8 +63,10 @@ class Lavalink extends EventEmitter {
 	}
 
 	destroy() {
-		this.ws.removeListener('close', this.disconnectHandler);
-		this.ws.close();
+		if (this.ws) {
+			this.ws.removeListener('close', this.disconnectHandler);
+			this.ws.close();
+		}
 	}
 
 	/**
@@ -73,6 +75,7 @@ class Lavalink extends EventEmitter {
 	ready() {
 		if (this.reconnectInterval) {
 			clearTimeout(this.reconnectInterval);
+			this.reconnectInterval = null;
 		}
 
 		this.connected = true;

@@ -313,8 +313,9 @@ class PlayerManager extends Collection {
                 channelId: this.pendingGuilds[data.guild_id].channelId,
                 hostname: this.pendingGuilds[data.guild_id].hostname,
                 node: this.pendingGuilds[data.guild_id].node,
+                options: this.pendingGuilds[data.guild_id].options,
                 event: data,
-                manger: this,
+                manager: this,
             }));
 
             player.connect({

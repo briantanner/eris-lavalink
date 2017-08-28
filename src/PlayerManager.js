@@ -44,6 +44,7 @@ class PlayerManager extends Collection {
     createNode(options) {
         let node = new Lavalink({
             host: options.host,
+            port: options.port,
             region: options.region,
             numShards: options.numShards,
             userId: options.userId,

@@ -19,6 +19,8 @@ class Lavalink extends EventEmitter {
 		super();
 
 		this.host = options.host;
+		this.port = options.port || 80;
+		this.address = `ws://${this.host}:${this.port}`;
 		this.region = options.region || null;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
@@ -38,9 +40,7 @@ class Lavalink extends EventEmitter {
 	 * Connect to the websocket server
 	 */
 	connect() {
-		let url = `ws://${this.host}`;
-		this.emit('debug', `[${new Date()}] Attempting to connect to ${url}`);
-		this.ws = new WebSocket(url, {
+		this.ws = new WebSocket(this.address, {
 			headers: {
 				'Authorization': this.password,
 				'Num-Shards': this.numShards,

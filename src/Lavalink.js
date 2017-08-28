@@ -22,6 +22,7 @@ class Lavalink extends EventEmitter {
 		this.region = options.region || null;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
+		this.password = options.password || 'youshallnotpass';
 		this.connected = false;
 		this.draining = false;
 		this.retries = 0;
@@ -41,7 +42,7 @@ class Lavalink extends EventEmitter {
 		this.emit('debug', `[${new Date()}] Attempting to connect to ${url}`);
 		this.ws = new WebSocket(url, {
 			headers: {
-				'Authorization': 'youshallnotpass',
+				'Authorization': this.password,
 				'Num-Shards': this.numShards,
 				'User-Id': this.userId,
 			},

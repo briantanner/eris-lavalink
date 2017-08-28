@@ -12,7 +12,7 @@ try {
 }
 
 class Player extends EventEmitter {
-    constructor(id, { hostname, guildId, channelId, shard, node, manager }) {
+    constructor(id, { hostname, guildId, channelId, shard, node, manager, options }) {
         super();
         this.id = id;
         this.node = node;
@@ -20,6 +20,7 @@ class Player extends EventEmitter {
         this.guildId = guildId;
         this.channelId = channelId;
         this.manager = manager || null;
+        this.options = options;
         this.ready = false;
         this.playing = false;
         this.shard = shard;

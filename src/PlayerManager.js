@@ -47,6 +47,7 @@ class PlayerManager extends Collection {
             region: options.region,
             numShards: options.numShards,
             userId: options.userId,
+            password: options.password,
         });
 
         node.on('error', this.onError.bind(this, node));

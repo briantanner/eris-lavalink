@@ -15,6 +15,17 @@ try {
  * @extends EventEmitter
  */
 class Lavalink extends EventEmitter {
+	/**
+	 * Lavalink constructor
+	 * @param {Object} options Lavalink node options
+	 * @param {string} options.host The hostname to connect to
+     * @param {string} options.port The port to connect with
+     * @param {string} options.region The region of the node
+     * @param {number} options.numShards The number of shards the bot is running
+     * @param {string} options.userId The user id of the bot
+     * @param {string} options.password The password for the Lavalink node
+	 * @param {number} [options.timeout=5000] Optional timeout in ms used for the reconnect backoff
+	 */
 	constructor(options) {
 		super();
 
@@ -56,6 +67,10 @@ class Lavalink extends EventEmitter {
 		});
 	}
 
+	/**
+	 * Reconnect to the websocket
+	 * @private
+	 */
 	reconnect() {
 		let interval = this.retryInterval();
 		this.reconnectInterval = setTimeout(this.reconnect.bind(this), interval);
@@ -63,6 +78,9 @@ class Lavalink extends EventEmitter {
 		this.connect();
 	}
 
+	/**
+	 * Destroy the websocket connection
+	 */
 	destroy() {
 		if (this.ws) {
 			this.ws.removeListener('close', this.disconnectHandler);
@@ -71,7 +89,8 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Identify
+	 * Called when the websocket is open
+	 * @private
 	 */
 	ready() {
 		if (this.reconnectInterval) {
@@ -85,7 +104,8 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Handle disconnect
+	 * Called when the websocket disconnects
+	 * @private
 	 */
 	disconnected() {
 		this.connected = false;
@@ -100,14 +120,18 @@ class Lavalink extends EventEmitter {
 		}
 	}
 
+	/**
+	 * Get the retry interval
+	 * @private
+	 */
 	retryInterval() {
 		let retries = Math.min(this.retries-1, 5);
 		return Math.pow(retries + 5, 2) * 1000;
 	}
 
 	/**
-	 * Send date to the server
-	 * @param {String} op Op name
+	 * Send data to Lavalink
+	 * @param {string} op Op name
 	 * @param {*} data Data to send
 	 */
 	send(data) {
@@ -125,8 +149,8 @@ class Lavalink extends EventEmitter {
 
 	/**
 	 * Handle message from the server
-	 * @param {String} message Raw websocket message
-	 * @returns {*|void}
+	 * @param {string} message Raw websocket message
+	 * @private
 	 */
 	onMessage(message) {
 		try {

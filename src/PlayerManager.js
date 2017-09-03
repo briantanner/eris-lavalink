@@ -1,6 +1,6 @@
 /**
  * Created by Julian & NoobLance on 25.05.2017.
- * DISCLAIMER: We reuse a lot of eris code, since we only need to do small modifications to enable our code to work
+ * DISCLAIMER: We reuse some eris code
  */
 const { Collection, Constants } = require('eris');
 const Lavalink = require('./Lavalink');
@@ -8,11 +8,21 @@ const Player = require('./Player');
 
 /**
  * Drop in Replacement for the eris voice connection manager
+ * @class PlayerManager
+ * @extends Collection
  */
 class PlayerManager extends Collection {
     /**
-     *
-     * @param {Object} options Options for stuff
+     * PlayerManager constructor
+     * @param {Client} client Eris client
+     * @param {Object[]} nodes The Lavalink nodes to connect to
+     * @param {Object} [options] Setup options
+     * @param {string} [options.defaultRegion] The default region
+     * @param {number} [options.failoverRate=250] Failover rate in ms
+     * @param {number} [options.failoverLimit=1] Number of connections to failover per rate limit
+     * @param {Object} [options.player] Optional Player class to replace the default Player
+     * @param {number} [options.reconnectThreshold=2000] The amount of time to skip ahead in a song when reconnecting in ms
+     * @param {Object} [options.regions] Region mapping object
      */
     constructor(client, nodes, options) {
         super(options.player || Player);
@@ -41,6 +51,16 @@ class PlayerManager extends Collection {
         this.client.on('shardReady', this.shardReadyListener);
     }
 
+    /**
+     * Create a Lavalink node
+     * @param {Object} options Lavalink node options
+     * @param {string} options.host The hostname to connect to
+     * @param {string} options.port The port to connect with
+     * @param {string} options.region The region of the node
+     * @param {number} options.numShards The number of shards the bot is running
+     * @param {string} options.userId The user id of the bot
+     * @param {string} options.password The password for the Lavalink node
+     */
     createNode(options) {
         let node = new Lavalink({
             host: options.host,
@@ -58,6 +78,10 @@ class PlayerManager extends Collection {
         this.nodes.set(options.host, node);
     }
 
+    /**
+     * Remove a Lavalink node
+     * @param {string} host The hostname of the node
+     */
     removeNode(host) {
         let node = this.nodes.get(host);
         if (!host) return;
@@ -66,10 +90,10 @@ class PlayerManager extends Collection {
         this.onDisconnect(node);
     }
 
-    onError(node, err) {
-        this.client.emit(err);
-    }
-
+    /**
+     * Check the failover queue
+     * @private
+     */
     checkFailoverQueue() {
         if (this.failoverQueue.length > 0) {
             let events = this.failoverQueue.splice(0, this.failoverLimit);
@@ -79,6 +103,11 @@ class PlayerManager extends Collection {
         }
     }
 
+    /**
+     * Queue a failover
+     * @param {Function} fn The failover function to queue
+     * @private
+     */
     queueFailover(fn) {
         if (this.failoverQueue.length > 0) {
             this.failoverQueue.push(fn);
@@ -87,11 +116,32 @@ class PlayerManager extends Collection {
         }
     }
 
-    async processQueue(fn) {
+    /**
+     * Process the failover queue
+     * @param {Function} fn The failover function to call
+     * @private
+     */
+    processQueue(fn) {
         fn();
         setTimeout(() => this.checkFailoverQueue(), this.failoverRate);
     }
 
+    /**
+     * Called when an error is received from a Lavalink node
+     * @param {Lavalink} node The Lavalink node
+     * @param {string|Error} err The error received
+     * @private
+     */
+    onError(node, err) {
+        this.client.emit(err);
+    }
+
+    /**
+     * Called when a node disconnects
+     * @param {Lavalink} node The Lavalink node
+     * @param {*} msg The disconnect message if sent
+     * @private
+     */
     onDisconnect(node, msg) {
         let players = this.filter(player => player.node.host === node.host);
         for (let player of players) {
@@ -99,6 +149,11 @@ class PlayerManager extends Collection {
         }
     }
 
+    /**
+     * Called when a shard readies
+     * @param {number} id Shard ID
+     * @private
+     */
     shardReady(id) {
         let players = this.filter(player => player.shard && player.shard.id === id);
         for (let player of players) {
@@ -106,6 +161,11 @@ class PlayerManager extends Collection {
         }
     }
 
+    /**
+     * Switch the voice node of a player
+     * @param {Player} player The Player instance
+     * @param {boolean} leave Whether to leave the channel or not on our side
+     */
     switchNode(player, leave) {
         let { guildId, channelId, lastTrack } = player,
             position = (player.state.position || 0) + (this.options.reconnectThreshold || 2000);
@@ -149,6 +209,12 @@ class PlayerManager extends Collection {
         });
     }
 
+    /**
+     * Called when a message is received from the voice node
+     * @param {Lavalink} node The Lavalink node
+     * @param {*} message The message received
+     * @private
+     */
     onMessage(node, message) {
         if (!message.op) return;
 
@@ -219,6 +285,14 @@ class PlayerManager extends Collection {
         }
     }
 
+    /**
+     * Join a voice channel
+     * @param {string} guildId The guild ID
+     * @param {string} channelId The channel ID
+     * @param {Object} options Join options
+     * @param {Player} [player] Optionally pass an existing player
+     * @returns {Promise<Player>}
+     */
     async join(guildId, channelId, options, player) {
         options = options || {};
 
@@ -258,6 +332,10 @@ class PlayerManager extends Collection {
         });
     }
 
+    /**
+     * Leave a voice channel
+     * @param {string} guildId The guild ID
+     */
     async leave(guildId) {
         let player = this.get(guildId);
         if (!player) {
@@ -267,6 +345,11 @@ class PlayerManager extends Collection {
         this.remove(player);
     }
 
+    /**
+     * Find the ideal voice node based on load and region
+     * @param {string} region Guild region
+     * @private
+     */
     async findIdealNode(region) {
         let nodes = [...this.nodes.values()].filter(node => !node.draining && node.ws && node.connected);
 
@@ -285,6 +368,11 @@ class PlayerManager extends Collection {
         return nodes[0];
     }
 
+    /**
+     * Called by eris when a voice server update is received
+     * @param {*} data The voice server update from eris
+     * @private
+     */
     async voiceServerUpdate(data) {
         if (this.pendingGuilds[data.guild_id] && this.pendingGuilds[data.guild_id].timeout) {
             clearTimeout(this.pendingGuilds[data.guild_id].timeout);
@@ -360,6 +448,11 @@ class PlayerManager extends Collection {
         player.once('ready', readyHandler).once('disconnect', disconnectHandler);
     }
 
+    /**
+     * Get ideal region from data
+     * @param {string} endpoint Endpoint or region
+     * @private
+     */
     getRegionFromData(endpoint) {
         if (!endpoint) return this.options.defaultRegion || 'us';
 

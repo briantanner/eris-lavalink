@@ -11,7 +11,24 @@ try {
     EventEmitter = require('events').EventEmitter;
 }
 
+/**
+ * Represents a player connection to a lavalink node
+ * @class Player
+ * @extends EventEmitter
+ */
 class Player extends EventEmitter {
+    /**
+     * Player constructor
+     * @param {string} id Guild ID
+     * @param {Object} data Player data
+     * @param {string} data.channelId The channel id of the player
+     * @param {string} data.guildId The guild id of the player
+     * @param {string} data.hostname The hostname of the lavalink node
+     * @param {PlayerManager} data.manager The PlayerManager associated with this player
+     * @param {Lavalink} data.node The Lavalink node associated with this player
+     * @param {Shard} data.shard The eris shard associated with this player
+     * @param {Object} [data.options] Additional passed from the user to the player
+     */
     constructor(id, { hostname, guildId, channelId, shard, node, manager, options }) {
         super();
         this.id = id;
@@ -31,6 +48,10 @@ class Player extends EventEmitter {
         this.timestamp = Date.now();
     }
 
+    /**
+     * Check the event queue
+     * @private
+     */
     checkEventQueue() {
         if (this.sendQueue.length > 0) {
             let event = this.sendQueue.splice(0,1);
@@ -38,6 +59,11 @@ class Player extends EventEmitter {
         }
     }
 
+    /**
+     * Queue an event to be sent to Lavalink
+     * @param {*} data The payload to queue
+     * @private
+     */
     queueEvent(data) {
         if (this.sendQueue.length > 0) {
             this.sendQueue.push(data);
@@ -46,12 +72,24 @@ class Player extends EventEmitter {
         }
     }
 
+    /**
+     * Send a payload to Lavalink
+     * @param {*} data The payload to send
+     * @private
+     */
     async sendEvent(data) {
         this.receivedEvents.push(data);
         this.node.send(data);
         process.nextTick(() => this.checkEventQueue());
     }
 
+    /**
+     * Connect to the Lavalink node
+     * @param {Object} data The data used to connect
+     * @param {string} data.guildId The guild ID to connect
+     * @param {string} data.sessionId The voice connection session ID
+     * @param {object} data.event The event data from the voice server update
+     */
     connect(data) {
         this.emit('connect');
         this.queueEvent({
@@ -64,12 +102,21 @@ class Player extends EventEmitter {
         process.nextTick(() => this.emit('ready'));
     }
 
+    /**
+     * Disconnect from Lavalink
+     * @param {*} [msg] An optional disconnect message
+     */
     async disconnect(msg) {
         this.playing = false;
         this.queueEvent({ op: 'disconnect', guildId: this.guildId });
         this.emit('disconnect', msg);
     }
 
+    /**
+     * Play a Lavalink track
+     * @param {string} track The track to play
+     * @param {Object} [options] Optional options to send
+     */
     play(track, options) {
         this.lastTrack = track;
         this.playOptions = options;
@@ -90,6 +137,9 @@ class Player extends EventEmitter {
         this.timestamp = Date.now();
     }
 
+    /**
+     * Stop playing
+     */
     stop() {
         // if (!this.playing) {
         let data = {
@@ -104,10 +154,19 @@ class Player extends EventEmitter {
         // }
     }
 
+    /**
+     * Update player state
+     * @param {Object} state The state object received from Lavalink
+     * @private
+     */
     stateUpdate(state) {
         this.state = state;
     }
 
+    /**
+     * Used to pause/resume the player
+     * @param {boolean} pause Set pause to true/false
+     */
     setPause(pause) {
         this.node.send({
             op: 'pause',
@@ -116,6 +175,10 @@ class Player extends EventEmitter {
         });
     }
 
+    /**
+     * Used for seeking to a track position
+     * @param {number} position The position to seek to
+     */
     seek(position) {
         this.node.send({
             op: 'seek',
@@ -124,6 +187,10 @@ class Player extends EventEmitter {
         });
     }
 
+    /**
+     * Set the volume of the player
+     * @param {number} volume The volume level to set
+     */
     setVolume(volume) {
         this.node.send({
             op: 'volume',
@@ -132,22 +199,45 @@ class Player extends EventEmitter {
         });
     }
 
+    /**
+     * Called on track end
+     * @param {Object} message The end reason
+     * @private
+     */
     onTrackEnd(message) {
         this.playing = false;
         this.emit('end', message);
     }
 
+    /**
+     * Called on track exception
+     * @param {Object} message The exception encountered
+     * @private
+     */
     onTrackException(message) {
         this.emit('error', message);
     }
 
+    /**
+     * Called on track stuck
+     * @param {Object} message The message if exists
+     * @private
+     */
     onTrackStuck(message) {
         this.play(this.lastTrack, { position: (this.state.position || 0) + 2000 });
         this.emit('stuck', message);
     }
 
-    async switchChannel(channelId) {
+    /**
+     * Switch voice channel
+     * @param {string} channelId Called when switching channels
+     * @param {boolean} [reactive] Used if you want the bot to switch channels
+     */
+    switchChannel(channelId, reactive) {
         this.channelId = channelId;
+        if (reactive === true) {
+            this.updateVoiceState(channelId);
+        }
     }
 
     getTimestamp() {
@@ -156,8 +246,8 @@ class Player extends EventEmitter {
 
     /**
      * Update the bot's voice state
-     * @arg {Boolean} selfMute Whether the bot muted itself or not (audio sending is unaffected)
-     * @arg {Boolean} selfDeaf Whether the bot deafened itself or not (audio receiving is unaffected)
+     * @param {boolean} selfMute Whether the bot muted itself or not (audio sending is unaffected)
+     * @param {boolean} selfDeaf Whether the bot deafened itself or not (audio receiving is unaffected)
      */
     updateVoiceState(channelId, selfMute, selfDeaf) {
         if (this.shard.sendWS) {

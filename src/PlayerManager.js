@@ -96,9 +96,9 @@ class PlayerManager extends Collection {
      */
     checkFailoverQueue() {
         if (this.failoverQueue.length > 0) {
-            let events = this.failoverQueue.splice(0, this.failoverLimit);
-            for (let event of events) {
-                this.processQueue(event);
+            let fns = this.failoverQueue.splice(0, this.failoverLimit);
+            for (let fn of fns) {
+                this.processQueue(fn);
             }
         }
     }
@@ -157,7 +157,7 @@ class PlayerManager extends Collection {
     shardReady(id) {
         let players = this.filter(player => player.shard && player.shard.id === id);
         for (let player of players) {
-            this.queueFailover(player);
+            this.queueFailover(this.switchNode.bind(this, player));
         }
     }
 

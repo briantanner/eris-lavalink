@@ -224,8 +224,7 @@ class Player extends EventEmitter {
      * @private
      */
     onTrackStuck(message) {
-        this.play(this.lastTrack, { position: (this.state.position || 0) + 2000 });
-        this.emit('stuck', message);
+        this.stop();
     }
 
     /**

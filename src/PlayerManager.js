@@ -342,7 +342,7 @@ class PlayerManager extends Collection {
             return;
         }
         player.disconnect();
-        this.remove(player);
+        this.delete(player);
     }
 
     /**

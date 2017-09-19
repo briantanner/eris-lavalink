@@ -225,6 +225,7 @@ class Player extends EventEmitter {
      */
     onTrackStuck(message) {
         this.stop();
+        process.nextTick(() => this.emit('end', message));
     }
 
     /**

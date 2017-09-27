@@ -223,6 +223,7 @@ class PlayerManager extends Collection {
                 let payload = {
                     op: 'validationRes',
                     guildId: message.guildId,
+                    valid: false,
                 };
 
                 if (message.channelId && message.channelId.length) {
@@ -254,12 +255,14 @@ class PlayerManager extends Collection {
             case 'sendWS': {
                 let shard = this.client.shards.get(message.shardId);
                 if (shard === undefined) return;
-                if (!shard.ready) return;
+
                 const payload = JSON.parse(message.message);
+
+                shard.sendWS(payload.op, payload.d);
+
                 if (payload.op === 4 && payload.d.channel_id === null) {
                     this.delete(payload.d.guild_id);
                 }
-                return shard.sendWS(payload.op, payload.d);
             }
             case 'playerUpdate': {
                 let player = this.get(message.guildId);

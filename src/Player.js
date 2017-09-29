@@ -118,7 +118,8 @@ class Player extends EventEmitter {
      * @param {Object} [options] Optional options to send
      */
     play(track, options) {
-        this.lastTrack = track;
+        this.lastTrack = this.track;
+        this.track = track;
         this.playOptions = options;
 
         if (this.node.draining) {
@@ -149,6 +150,9 @@ class Player extends EventEmitter {
 
         this.queueEvent(data);
         this.playing = false;
+        this.lastTrack = this.track;
+        this.track = null;
+
         // } else {
         //     console.error('already stopped playing');
         // }
@@ -205,7 +209,11 @@ class Player extends EventEmitter {
      * @private
      */
     onTrackEnd(message) {
-        this.playing = false;
+        if (message.reason !== 'REPLACED') {
+            this.playing = false;
+            this.lastTrack = this.track;
+            this.track = null;
+        }
         this.emit('end', message);
     }
 

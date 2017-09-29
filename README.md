@@ -123,4 +123,4 @@ getPlayer(channel).then(player => {
 
 **A note on pauses** 
 
-When you pause a player, the player will be kept in a paused state until you explicitly call resume or the player is disconnected. `player.paused` can be used to check if the player is in paused state.
+When you pause a player, the player will be kept in a paused state until you explicitly call resume or the player is disconnected. Calls to `play` and `stop` won't clear the pause state. `player.paused` can be used to check if the player is in paused state.

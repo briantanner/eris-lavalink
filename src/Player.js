@@ -234,6 +234,10 @@ class Player extends EventEmitter {
      * @param {boolean} [reactive] Used if you want the bot to switch channels
      */
     switchChannel(channelId, reactive) {
+        if(this.channelId === channelId) {
+            return;
+        }
+
         this.channelId = channelId;
         if (reactive === true) {
             this.updateVoiceState(channelId);

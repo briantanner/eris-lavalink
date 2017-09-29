@@ -40,6 +40,7 @@ class Player extends EventEmitter {
         this.options = options;
         this.ready = false;
         this.playing = false;
+        this.paused = false;
         this.shard = shard;
         this.state = {};
         this.track = null;
@@ -108,6 +109,7 @@ class Player extends EventEmitter {
      */
     async disconnect(msg) {
         this.playing = false;
+        this.paused = false;
         this.queueEvent({ op: 'disconnect', guildId: this.guildId });
         this.emit('disconnect', msg);
     }
@@ -134,7 +136,7 @@ class Player extends EventEmitter {
         }, options);
 
         this.queueEvent(payload);
-        this.playing = true;
+        this.playing = !this.paused;
         this.timestamp = Date.now();
     }
 
@@ -170,6 +172,7 @@ class Player extends EventEmitter {
     /**
      * Used to pause/resume the player
      * @param {boolean} pause Set pause to true/false
+     * @private
      */
     setPause(pause) {
         this.node.send({
@@ -177,6 +180,27 @@ class Player extends EventEmitter {
             guildId: this.guildId,
             pause: pause,
         });
+
+        this.paused = pause;
+        this.playing = !pause;
+    }
+
+    /**
+     * Used to pause the player
+     */
+    pause() {
+        if (this.playing) {
+            this.setPause(true);
+        }
+    }
+
+    /**
+     * Used to resume the player
+     */
+    resume() {
+        if (!this.playing && this.paused) {
+            this.setPause(false)
+        }
     }
 
     /**

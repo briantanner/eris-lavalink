@@ -167,7 +167,7 @@ class PlayerManager extends Collection {
      * @param {boolean} leave Whether to leave the channel or not on our side
      */
     switchNode(player, leave) {
-        let { guildId, channelId, track } = player,
+        let { guildId, channelId, track, paused } = player,
             position = (player.state.position || 0) + (this.options.reconnectThreshold || 2000);
 
         let listeners = player.listeners('end'),
@@ -198,6 +198,9 @@ class PlayerManager extends Collection {
 
         process.nextTick(() => {
             this.join(guildId, channelId, null, player).then(player => {
+                if (paused) {
+                    player.pause();
+                }
                 player.play(track, { startTime: position });
                 player.emit('reconnect');
                 this.set(guildId, player);

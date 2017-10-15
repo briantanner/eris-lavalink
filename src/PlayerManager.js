@@ -246,7 +246,7 @@ class PlayerManager extends Collection {
                 };
 
                 let shard = this.client.shards.get(message.shardId);
-                if (shard && shard.status === 'connected') {
+                if (shard && (shard.status === 'connected' || shard.status === 'ready')) {
                     payload.connected = true;
                 }
 

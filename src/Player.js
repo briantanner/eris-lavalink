@@ -40,9 +40,11 @@ class Player extends EventEmitter {
         this.options = options;
         this.ready = false;
         this.playing = false;
+        this.paused = false;
         this.shard = shard;
         this.state = {};
         this.track = null;
+        this.volume = null;
         this.receivedEvents = [];
         this.sendQueue = [];
         this.timestamp = Date.now();
@@ -177,6 +179,9 @@ class Player extends EventEmitter {
             guildId: this.guildId,
             pause: pause,
         });
+
+        this.playing = !pause;
+        this.paused = pause;
     }
 
     /**
@@ -201,6 +206,8 @@ class Player extends EventEmitter {
             guildId: this.guildId,
             volume: volume,
         });
+
+        this.volume = volume;
     }
 
     /**

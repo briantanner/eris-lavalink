@@ -3,7 +3,7 @@
 A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://github.com/abalabahaha/eris)
 
 ## Links
-- **[Documentation](https://briantanner.github.io/eris-lavalink/index.html)**
+- **[Documentation](https://briantanner.github.io/eris-lavalink/)**
 - **[Lavalink](https://github.com/Frederikam/Lavalink)**
 - **[eris](https://github.com/abalabahaha/eris)**
 - **[lavalink.js](https://github.com/briantanner/lavalink.js)** (discord.js port)

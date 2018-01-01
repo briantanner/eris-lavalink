@@ -1,7 +1,8 @@
 {
   "name": "eris-lavalink",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "license": "MIT",
+  "description": "A Lavalink client for eris",
   "homepage": "https://github.com/briantanner/eris-lavalink",
   "author": {
     "name": "Brian Tanner",
@@ -19,5 +20,8 @@
   "dependencies": {
     "eris": "github:abalabahaha/eris#dev",
     "ws": "^3.1.0"
+  },
+  "devDependencies": {
+    "docdash": "^0.4.0"
   }
 }

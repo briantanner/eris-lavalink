@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Home - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Lavalink.html">Lavalink</a><ul class='methods'><li data-type='method'><a href="Lavalink.html#destroy">destroy</a></li><li data-type='method'><a href="Lavalink.html#send">send</a></li></ul></li><li><a href="Player.html">Player</a><ul class='methods'><li data-type='method'><a href="Player.html#connect">connect</a></li><li data-type='method'><a href="Player.html#disconnect">disconnect</a></li><li data-type='method'><a href="Player.html#play">play</a></li><li data-type='method'><a href="Player.html#seek">seek</a></li><li data-type='method'><a href="Player.html#setPause">setPause</a></li><li data-type='method'><a href="Player.html#setVolume">setVolume</a></li><li data-type='method'><a href="Player.html#stop">stop</a></li><li data-type='method'><a href="Player.html#switchChannel">switchChannel</a></li></ul></li><li><a href="PlayerManager.html">PlayerManager</a><ul class='methods'><li data-type='method'><a href="PlayerManager.html#createNode">createNode</a></li><li data-type='method'><a href="PlayerManager.html#join">join</a></li><li data-type='method'><a href="PlayerManager.html#leave">leave</a></li><li data-type='method'><a href="PlayerManager.html#removeNode">removeNode</a></li><li data-type='method'><a href="PlayerManager.html#switchNode">switchNode</a></li></ul></li></ul>
+</nav>
+
+<div id="main">
+    
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+
+
+    
+
+
+    <section class="readme">
+        <article><h1>eris-lavalink</h1><p>A <a href="https://github.com/Frederikam/Lavalink">Lavalink</a> client for <a href="https://github.com/abalabahaha/eris">eris</a></p>
+<h2>Links</h2><ul>
+<li><strong><a href="https://briantanner.github.io/eris-lavalink/index.html">Documentation</a></strong></li>
+<li><strong><a href="https://github.com/Frederikam/Lavalink">Lavalink</a></strong></li>
+<li><strong><a href="https://github.com/abalabahaha/eris">eris</a></strong></li>
+<li><strong><a href="https://github.com/briantanner/lavalink.js">lavalink.js</a></strong> (discord.js port)</li>
+</ul>
+<h2>Install</h2><pre class="prettyprint source"><code>npm install eris-lavalink</code></pre><h2>Implementation</h2><p>Start by creating the <code>PlayerManager</code> and passing a list of nodes and optional list of regions</p>
+<pre class="prettyprint source lang-js"><code>const { PlayerManager } = require('eris-lavalink');
+
+let nodes = [
+    { host: 'localhost', port: 8080, region: 'eu', password: 'youshallnotpass' }
+];
+
+let regions = {
+    eu: ['eu', 'amsterdam', 'frankfurt', 'russia', 'hongkong', 'singapore', 'sydney'],
+    us: ['us', 'brazil'],
+};
+
+if (!(client.voiceConnections instanceof PlayerManager)) {
+    client.voiceConnections = new PlayerManager(client, nodes, {
+        numShards: shardCount, // number of shards
+        userId: userid, // the user id of the bot
+        regions: regions,
+        defaultRegion: 'eu',
+    });
+}</code></pre><p>To resolve a track, use the Lavalink rest api</p>
+<pre class="prettyprint source lang-js"><code>const superagent = require('superagent');
+
+async function resolveTracks(node, search) {
+    try {
+        var result = await superagent.get(`http://${node.host}:2333/loadtracks?identifier=${search}`)
+            .set('Authorization', node.password)
+            .set('Accept', 'application/json');
+    } catch (err) {
+        throw err;
+    }
+
+    if (!result) {
+        throw 'Unable play that video.';
+    }
+
+    return result.body; // array of tracks resolved from lavalink
+}
+
+resolveTracks(node, 'ytsearch:the 30 second video').then(tracks => {
+    if (!tracks) {
+        // no tracks to play
+    }
+    // do something with the tracks
+})</code></pre><p>To join and leave voice channels, use the Lavalink client rather than using eris.</p>
+<pre class="prettyprint source lang-js"><code>// to get or join a channel
+function getPlayer(channel) {
+    if (!channel || !channel.guild) {
+        return Promise.reject('Not a guild channel.');
+    }
+
+    let player = client.voiceConnections.get(channel.guild.id);
+    if (player) {
+        return Promise.resolve(player);
+    }
+
+    let options = {};
+    if (channel.guild.region) {
+        options.region = channel.guild.region;
+    }
+
+    return client.voiceConnections.join(channel.guild.id, channel.id, options);
+}
+
+// play example
+getPlayer(channel).then(player => {
+    player.play(track); // track is the base64 track we get from Lavalink
+
+    player.on('disconnect', (err) => {
+        if (err) {
+            // log error
+        }
+        // do something
+    });
+
+    player.on('error', err => {
+        // log error and handle it
+    });
+
+    player.on('stuck', msg => {
+        // track stuck event
+    })
+
+    player.once('end', data => {
+        // REPLACED reason is emitted when playing without stopping, I ignore these to prevent skip loops
+        if (data.reason && data.reason === 'REPLACED') {
+            return;
+        }
+
+        // start playing the next song
+    });
+});
+
+// stop example
+getPlayer(channel).then(player => {
+    player.stop();
+    if (leave) {
+        // disconnect and leave the channel
+        player.leave();
+    }
+})</code></pre></article>
+    </section>
+
+
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Mon Jan 01 2018 08:16:30 GMT-0500 (EST) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>

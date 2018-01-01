@@ -10,6 +10,8 @@ node_modules/
 coverage
 
 test/
+docs/
+__tests__/
 
 # VS Code
 .vscode

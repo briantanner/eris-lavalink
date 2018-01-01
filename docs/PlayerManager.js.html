@@ -1,5 +1,44 @@
-/**
- * Created by Julian & NoobLance on 25.05.2017.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>PlayerManager.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Lavalink.html">Lavalink</a><ul class='methods'><li data-type='method'><a href="Lavalink.html#destroy">destroy</a></li><li data-type='method'><a href="Lavalink.html#send">send</a></li></ul></li><li><a href="Player.html">Player</a><ul class='methods'><li data-type='method'><a href="Player.html#connect">connect</a></li><li data-type='method'><a href="Player.html#disconnect">disconnect</a></li><li data-type='method'><a href="Player.html#play">play</a></li><li data-type='method'><a href="Player.html#seek">seek</a></li><li data-type='method'><a href="Player.html#setPause">setPause</a></li><li data-type='method'><a href="Player.html#setVolume">setVolume</a></li><li data-type='method'><a href="Player.html#stop">stop</a></li><li data-type='method'><a href="Player.html#switchChannel">switchChannel</a></li></ul></li><li><a href="PlayerManager.html">PlayerManager</a><ul class='methods'><li data-type='method'><a href="PlayerManager.html#createNode">createNode</a></li><li data-type='method'><a href="PlayerManager.html#join">join</a></li><li data-type='method'><a href="PlayerManager.html#leave">leave</a></li><li data-type='method'><a href="PlayerManager.html#removeNode">removeNode</a></li><li data-type='method'><a href="PlayerManager.html#switchNode">switchNode</a></li></ul></li></ul>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">PlayerManager.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * Created by Julian &amp; NoobLance on 25.05.2017.
  * DISCLAIMER: We reuse some eris code
  */
 
@@ -161,7 +200,7 @@ class PlayerManager extends Collection {
      * @private
      */
     shardReady(id) {
-        let players = this.filter(player => player.shard && player.shard.id === id);
+        let players = this.filter(player => player.shard &amp;&amp; player.shard.id === id);
         for (let player of players) {
             this.queueFailover(this.switchNode.bind(this, player));
         }
@@ -174,13 +213,13 @@ class PlayerManager extends Collection {
      * @returns {void}
      */
     switchNode(player, leave) {
-        let { guildId, channelId, track, paused } = player,
+        let { guildId, channelId, track } = player,
             position = (player.state.position || 0) + (this.options.reconnectThreshold || 2000);
 
         let listeners = player.listeners('end'),
             endListeners = [];
 
-        if (listeners && listeners.length) {
+        if (listeners &amp;&amp; listeners.length) {
             for (let listener of listeners) {
                 endListeners.push(listener);
                 player.removeListener('end', listener);
@@ -205,9 +244,6 @@ class PlayerManager extends Collection {
 
         process.nextTick(() => {
             this.join(guildId, channelId, null, player).then(player => {
-                if (paused) {
-                    player.pause();
-                }
                 player.play(track, { startTime: position });
                 player.emit('reconnect');
                 this.set(guildId, player);
@@ -238,13 +274,13 @@ class PlayerManager extends Collection {
                 let guildValid = false;
                 let channelValid = false;
 
-                if (message.guildId && message.guildId.length) {
+                if (message.guildId &amp;&amp; message.guildId.length) {
                     guildValid = this.client.guilds.has(message.guildId);
                 } else {
                     guildValid = true;
                 }
 
-                if (message.channelId && message.channelId.length) {
+                if (message.channelId &amp;&amp; message.channelId.length) {
                     let voiceChannel = this.client.getChannel(message.channelId);
                     if (voiceChannel) {
                         payload.channelId = voiceChannel.id;
@@ -254,7 +290,7 @@ class PlayerManager extends Collection {
                     channelValid = true;
                 }
 
-                payload.valid = guildValid && channelValid;
+                payload.valid = guildValid &amp;&amp; channelValid;
 
                 return node.send(payload);
             }
@@ -266,7 +302,7 @@ class PlayerManager extends Collection {
                 };
 
                 let shard = this.client.shards.get(message.shardId);
-                if (shard && (shard.status === 'connected' || shard.status === 'ready')) {
+                if (shard &amp;&amp; (shard.status === 'connected' || shard.status === 'ready')) {
                     payload.connected = true;
                 }
 
@@ -280,7 +316,7 @@ class PlayerManager extends Collection {
 
                 shard.sendWS(payload.op, payload.d);
 
-                if (payload.op === 4 && payload.d.channel_id === null) {
+                if (payload.op === 4 &amp;&amp; payload.d.channel_id === null) {
                     this.delete(payload.d.guild_id);
                 }
             }
@@ -314,13 +350,13 @@ class PlayerManager extends Collection {
      * @param {string} channelId The channel ID
      * @param {Object} options Join options
      * @param {Player} [player] Optionally pass an existing player
-     * @returns {Promise<Player>}
+     * @returns {Promise&lt;Player>}
      */
     async join(guildId, channelId, options, player) {
         options = options || {};
 
         player = player || this.get(guildId);
-        if (player && player.channelId !== channelId) {
+        if (player &amp;&amp; player.channelId !== channelId) {
             player.switchChannel(channelId);
             return Promise.resolve(player);
         }
@@ -375,11 +411,11 @@ class PlayerManager extends Collection {
      * @private
      */
     async findIdealNode(region) {
-        let nodes = [...this.nodes.values()].filter(node => !node.draining && node.ws && node.connected);
+        let nodes = [...this.nodes.values()].filter(node => !node.draining &amp;&amp; node.ws &amp;&amp; node.connected);
 
         if (region) {
             let regionalNodes = nodes.filter(node => node.region === region);
-            if (regionalNodes && regionalNodes.length) {
+            if (regionalNodes &amp;&amp; regionalNodes.length) {
                 nodes = regionalNodes;
             }
         }
@@ -398,7 +434,7 @@ class PlayerManager extends Collection {
      * @private
      */
     async voiceServerUpdate(data) {
-        if (this.pendingGuilds[data.guild_id] && this.pendingGuilds[data.guild_id].timeout) {
+        if (this.pendingGuilds[data.guild_id] &amp;&amp; this.pendingGuilds[data.guild_id].timeout) {
             clearTimeout(this.pendingGuilds[data.guild_id].timeout);
             this.pendingGuilds[data.guild_id].timeout = null;
         }
@@ -485,7 +521,7 @@ class PlayerManager extends Collection {
         for (let key in this.regions) {
             let nodes = this.nodes.filter(n => n.region === key);
             if (!nodes || !nodes.length) continue;
-            if (!nodes.find(n => n.connected && !n.draining)) continue;
+            if (!nodes.find(n => n.connected &amp;&amp; !n.draining)) continue;
             for (let region of this.regions[key]) {
                 if (endpoint.startsWith(region)) {
                     return key;
@@ -498,3 +534,22 @@ class PlayerManager extends Collection {
 }
 
 module.exports = PlayerManager;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.5.5</a> on Mon Jan 01 2018 08:16:30 GMT-0500 (EST) using the <a href="https://github.com/clenemt/docdash">docdash</a> theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>

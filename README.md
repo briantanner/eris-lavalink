@@ -120,3 +120,6 @@ getPlayer(channel).then(player => {
 	}
 })
 ```
+
+Discord.js port:
+* [lavalink.js](https://github.com/briantanner/lavalink.js) (discord.js, JavaScript)

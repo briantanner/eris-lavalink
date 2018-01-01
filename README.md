@@ -5,7 +5,7 @@ A Lavalink client for eris for distributed music nodes.
 
 **Install**
 ```
-npm install briantanner/eris-lavalink
+npm install eris-lavalink
 ```
 
 **Implementation**

@@ -116,7 +116,7 @@ getPlayer(channel).then(player => {
 	player.stop();
 	if (leave) {
 		// disconnect and leave the channel
-		player.leave();
+		player.disconnect();
 	}
 })
 ```

@@ -226,18 +226,28 @@ class PlayerManager extends Collection {
                 let payload = {
                     op: 'validationRes',
                     guildId: message.guildId,
-                    valid: false,
                 };
+
+                let guildValid = false;
+                let channelValid = false;
+
+                if (message.guildId && message.guildId.length) {
+                    guildValid = this.client.guilds.has(message.guildId);
+                } else {
+                    guildValid = true;
+                }
 
                 if (message.channelId && message.channelId.length) {
                     let voiceChannel = this.client.getChannel(message.channelId);
                     if (voiceChannel) {
                         payload.channelId = voiceChannel.id;
-                        payload.valid = true;
+                        channelValid = true;
                     }
                 } else {
-                    payload.valid = true;
+                    channelValid = true;
                 }
+
+                payload.valid = guildValid && channelValid;
 
                 return node.send(payload);
             }
@@ -249,7 +259,7 @@ class PlayerManager extends Collection {
                 };
 
                 let shard = this.client.shards.get(message.shardId);
-                if (shard && shard.status === 'connected') {
+                if (shard && (shard.status === 'connected' || shard.status === 'ready')) {
                     payload.connected = true;
                 }
 

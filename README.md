@@ -5,7 +5,7 @@ A Lavalink client for eris for distributed music nodes.
 
 **Install**
 ```
-npm install briantanner/eris-lavalink
+npm install eris-lavalink
 ```
 
 **Implementation**
@@ -124,3 +124,6 @@ getPlayer(channel).then(player => {
 **A note on pauses** 
 
 When you pause a player, the player will be kept in a paused state until you explicitly call resume or the player is disconnected. Calls to `play` and `stop` won't clear the pause state. `player.paused` can be used to check if the player is in paused state.
+
+**Discord.js port:**
+* [lavalink.js](https://github.com/briantanner/lavalink.js) (discord.js, JavaScript)

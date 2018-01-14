@@ -51,7 +51,6 @@ class Player extends EventEmitter {
         this.shard = shard;
         this.state = {};
         this.track = null;
-        this.receivedEvents = [];
         this.sendQueue = [];
         this.timestamp = Date.now();
     }
@@ -86,7 +85,6 @@ class Player extends EventEmitter {
      * @private
      */
     async sendEvent(data) {
-        this.receivedEvents.push(data);
         this.node.send(data);
         process.nextTick(() => this.checkEventQueue());
     }

@@ -199,8 +199,6 @@ class PlayerManager extends Collection {
 
         if (leave) {
             player.updateVoiceState(null);
-        } else {
-            player.node.send({ op: 'disconnect', guildId: guildId });
         }
 
         process.nextTick(() => {

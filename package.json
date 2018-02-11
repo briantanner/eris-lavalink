@@ -1,6 +1,6 @@
 {
   "name": "eris-lavalink",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "license": "MIT",
   "description": "A Lavalink client for eris",
   "homepage": "https://github.com/briantanner/eris-lavalink",

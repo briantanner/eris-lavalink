@@ -366,7 +366,7 @@ class PlayerManager extends Collection {
             return;
         }
         player.disconnect();
-        this.delete(player);
+        this.delete(guildId);
     }
 
     /**
@@ -431,17 +431,18 @@ class PlayerManager extends Collection {
                 manager: this,
             }));
 
-            player.connect({
-                sessionId: data.session_id,
-                guildId: data.guild_id,
-                channelId: this.pendingGuilds[data.guild_id].channelId,
-                event: {
-                    endpoint: data.endpoint,
-                    guild_id: data.guild_id,
-                    token: data.token,
-                },
-            });
         }
+
+        player.connect({
+            sessionId: data.session_id,
+            guildId: data.guild_id,
+            channelId: this.pendingGuilds[data.guild_id].channelId,
+            event: {
+                endpoint: data.endpoint,
+                guild_id: data.guild_id,
+                token: data.token,
+            },
+        });
 
         let disconnectHandler = () => {
             player = this.get(data.guild_id);

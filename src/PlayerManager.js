@@ -139,7 +139,7 @@ class PlayerManager extends Collection {
      * @private
      */
     onError(node, err) {
-        this.client.emit(err);
+        this.client.emit('error', err);
     }
 
     /**
@@ -229,61 +229,6 @@ class PlayerManager extends Collection {
         if (!message.op) return;
 
         switch (message.op) {
-            case 'validationReq': {
-                let payload = {
-                    op: 'validationRes',
-                    guildId: message.guildId,
-                };
-
-                let guildValid = false;
-                let channelValid = false;
-
-                if (message.guildId && message.guildId.length) {
-                    guildValid = this.client.guilds.has(message.guildId);
-                } else {
-                    guildValid = true;
-                }
-
-                if (message.channelId && message.channelId.length) {
-                    let voiceChannel = this.client.getChannel(message.channelId);
-                    if (voiceChannel) {
-                        payload.channelId = voiceChannel.id;
-                        channelValid = true;
-                    }
-                } else {
-                    channelValid = true;
-                }
-
-                payload.valid = guildValid && channelValid;
-
-                return node.send(payload);
-            }
-            case 'isConnectedReq': {
-                let payload = {
-                    op: 'isConnectedRes',
-                    shardId: parseInt(message.shardId),
-                    connected: false,
-                };
-
-                let shard = this.client.shards.get(message.shardId);
-                if (shard && (shard.status === 'connected' || shard.status === 'ready')) {
-                    payload.connected = true;
-                }
-
-                return node.send(payload);
-            }
-            case 'sendWS': {
-                let shard = this.client.shards.get(message.shardId);
-                if (shard === undefined) return;
-
-                const payload = JSON.parse(message.message);
-
-                shard.sendWS(payload.op, payload.d);
-
-                if (payload.op === 4 && payload.d.channel_id === null) {
-                    this.delete(payload.d.guild_id);
-                }
-            }
             case 'playerUpdate': {
                 let player = this.get(message.guildId);
                 if (!player) return;
@@ -341,17 +286,10 @@ class PlayerManager extends Collection {
                 res: res,
                 rej: rej,
                 timeout: setTimeout(() => {
-                    node.send({ op: 'disconnect', guildId: guildId });
                     delete this.pendingGuilds[guildId];
                     rej(new Error('Voice connection timeout'));
                 }, 10000),
             };
-
-            node.send({
-                op: 'connect',
-                guildId: guildId,
-                channelId: channelId,
-            });
         });
     }
 
@@ -366,13 +304,13 @@ class PlayerManager extends Collection {
             return;
         }
         player.disconnect();
-        this.delete(player);
+        this.delete(guildId);
     }
 
     /**
      * Find the ideal voice node based on load and region
      * @param {string} region Guild region
-     * @private
+     * @returns {Lavalink} node Node with the lowest load for a region
      */
     async findIdealNode(region) {
         let nodes = [...this.nodes.values()].filter(node => !node.draining && node.ws && node.connected);
@@ -430,18 +368,18 @@ class PlayerManager extends Collection {
                 event: data,
                 manager: this,
             }));
-
-            player.connect({
-                sessionId: data.session_id,
-                guildId: data.guild_id,
-                channelId: this.pendingGuilds[data.guild_id].channelId,
-                event: {
-                    endpoint: data.endpoint,
-                    guild_id: data.guild_id,
-                    token: data.token,
-                },
-            });
         }
+        
+        player.connect({
+            sessionId: data.session_id,
+            guildId: data.guild_id,
+            channelId: this.pendingGuilds[data.guild_id].channelId,
+            event: {
+                endpoint: data.endpoint,
+                guild_id: data.guild_id,
+                token: data.token,
+            },
+        });
 
         let disconnectHandler = () => {
             player = this.get(data.guild_id);

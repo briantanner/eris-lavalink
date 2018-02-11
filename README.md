@@ -10,7 +10,11 @@ A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://g
 
 ## Install
 ```
+# Lavalink v2
 npm install eris-lavalink
+
+# Lavalink v1
+npm install eris-lavalink@^0.1.3
 ```
 
 ## Implementation
@@ -84,7 +88,7 @@ function getPlayer(channel) {
 		options.region = channel.guild.region;
 	}
 
-	return client.voiceConnections.join(channel.guild.id, channel.id, options);
+	return client.joinVoiceChannel(channel.id);
 }
 
 // play example
@@ -121,7 +125,7 @@ getPlayer(channel).then(player => {
 	player.stop();
 	if (leave) {
 		// disconnect and leave the channel
-		player.disconnect();
+		client.leaveVoiceChannel(channel.id);
 	}
 })
 ```

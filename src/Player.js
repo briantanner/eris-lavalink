@@ -118,12 +118,11 @@ class Player extends EventEmitter {
         this.playing = false;
 
         // Player pause state will persist even after
-        // disconnecting
         if (this.paused) {
             this.resume()
         }
 
-        this.queueEvent({ op: 'disconnect', guildId: this.guildId });
+        this.stop();
         this.emit('disconnect', msg);
     }
 
@@ -159,12 +158,12 @@ class Player extends EventEmitter {
      * @returns {void}
      */
     stop() {
-        let data = {
+        let payload = {
             op: 'stop',
             guildId: this.guildId,
         };
 
-        this.queueEvent(data);
+        this.queueEvent(payload);
         this.playing = false;
         this.lastTrack = this.track;
         this.track = null;

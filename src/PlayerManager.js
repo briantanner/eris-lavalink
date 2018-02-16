@@ -367,11 +367,20 @@ class PlayerManager extends Collection {
                 manager: this,
             }));
         }
+
+        const channelId = player.channelId || this.pendingGuilds[data.guild_id].channelId;
+        if (!channelId) {
+            if (this.pendingGuilds[data.guild_id]) {
+                delete this.pendingGuilds[data.guild_id];
+                return this.pendingGuilds[data.guild_id].rej(new Error('Invalid Channel ID'));
+            }
+            return;
+        }
         
         player.connect({
             sessionId: data.session_id,
             guildId: data.guild_id,
-            channelId: this.pendingGuilds[data.guild_id].channelId,
+            channelId: channelId,
             event: {
                 endpoint: data.endpoint,
                 guild_id: data.guild_id,

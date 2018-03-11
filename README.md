@@ -83,11 +83,6 @@ function getPlayer(channel) {
 		return Promise.resolve(player);
 	}
 
-	let options = {};
-	if (channel.guild.region) {
-		options.region = channel.guild.region;
-	}
-
 	return client.joinVoiceChannel(channel.id);
 }
 

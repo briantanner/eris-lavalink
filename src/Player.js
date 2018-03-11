@@ -204,6 +204,13 @@ class Player extends EventEmitter {
     }
 
     /**
+     * Toggles the pause on the player
+     */
+    togglePause() {
+        this.setPause(!this.paused);
+    }
+
+    /**
      * Used to resume the player
      */
     resume() {

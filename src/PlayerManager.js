@@ -211,7 +211,6 @@ class PlayerManager extends Collection {
                 this.set(guildId, player);
             })
             .catch(err => {
-                player.emit('disconnect', err);
                 player.disconnect();
             });
         });
@@ -301,7 +300,7 @@ class PlayerManager extends Collection {
         if (!player) {
             return;
         }
-        player.disconnect();
+        player._disconnect();
         this.delete(guildId);
     }
 

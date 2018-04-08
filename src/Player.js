@@ -114,18 +114,21 @@ class Player extends EventEmitter {
      * @param {*} [msg] An optional disconnect message
      * @returns {void}
      */
-    async disconnect(msg) {
+    disconnect(msg) {
+        this._disconnect();
+        this.emit('disconnect', msg);
+    }
+
+    _disconnect() {
         this.playing = false;
 
-        // Player pause state will persist even after
         if (this.paused) {
-            this.resume()
+            this.resume();
         }
 
         this.queueEvent({ op: 'destroy', guildId: this.guildId });
 
         this.stop();
-        this.emit('disconnect', msg);
     }
 
     /**

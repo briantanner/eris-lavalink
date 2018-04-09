@@ -88,7 +88,7 @@ function getPlayer(channel) {
 		options.region = channel.guild.region;
 	}
 
-	return client.joinVoiceChannel(channel.id);
+	return client.joinVoiceChannel(channel.id, options);
 }
 
 // play example

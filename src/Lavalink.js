@@ -6,42 +6,44 @@ var EventEmitter;
 
 try {
 	EventEmitter = require('eventemitter3');
-} catch (err) {
+} catch(err) {
 	EventEmitter = require('events').EventEmitter;
 }
 
 /**
- * Represents a Lavalink node
- * @extends EventEmitter
- * @prop {string} host The hostname for the node
- * @prop {number} port The port number for the node
- * @prop {string} address The full ws address for the node
- * @prop {string} region The region for this node
- * @prop {string} userId The client user id
- * @prop {number} numShards The total number of shards the bot is running
- * @prop {string} password The password used to connect
- * @prop {boolean} connected If it's connected to the node
- * @prop {boolean} draining True if this node will no longer take new connections
- * @prop {object} stats The Lavalink node stats
- */
+* Represents a Lavalink node
+* @extends EventEmitter
+* @prop {string} host The hostname for the node
+* @prop {number} port The port number for the node
+* @prop {string} address The full ws address for the node
+* @prop {string} region The region for this node
+* @prop {string} userId The client user id
+* @prop {number} numShards The total number of shards the bot is running
+* @prop {string} password The password used to connect
+* @prop {boolean} connected If it's connected to the node
+* @prop {boolean} draining True if this node will no longer take new connections
+* @prop {object} stats The Lavalink node stats
+*/
 class Lavalink extends EventEmitter {
 	/**
-	 * Lavalink constructor
-	 * @param {Object} options Lavalink node options
-	 * @param {string} options.host The hostname to connect to
-     * @param {string} options.port The port to connect with
-     * @param {string} options.region The region of the node
-     * @param {number} options.numShards The number of shards the bot is running
-     * @param {string} options.userId The user id of the bot
-     * @param {string} options.password The password for the Lavalink node
-	 * @param {number} [options.timeout=5000] Optional timeout in ms used for the reconnect backoff
-	 */
+	* Lavalink constructor
+	* @param {Object} options Lavalink node options
+	* @param {string} options.host The hostname to connect to
+	* @param {string} options.port The port to connect with
+	* @param {boolean} options.secure Whether or not the websocket is secure (use wss rather than ws)
+	* @param {string} options.region The region of the node
+	* @param {number} options.numShards The number of shards the bot is running
+	* @param {string} options.userId The user id of the bot
+	* @param {string} options.password The password for the Lavalink node
+	* @param {number} [options.timeout=5000] Optional timeout in ms used for the reconnect backoff
+	*/
 	constructor(options) {
 		super();
 
 		this.host = options.host;
 		this.port = options.port || 80;
-		this.address = `ws://${this.host}:${this.port}`;
+		this.secure = !!options.secure;
+		this.address = `ws${this.secure ? 's' : ''}://${this.host}:${this.port}`;
 		this.region = options.region || null;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
@@ -58,13 +60,13 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Connect to the websocket server
-	 * @private
-	 */
+	* Connect to the websocket server
+	* @private
+	*/
 	connect() {
 		this.ws = new WebSocket(this.address, {
 			headers: {
-				'Authorization': this.password,
+				Authorization: this.password,
 				'Num-Shards': this.numShards,
 				'User-Id': this.userId,
 			},
@@ -79,9 +81,9 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Reconnect to the websocket
-	 * @private
-	 */
+	* Reconnect to the websocket
+	* @private
+	*/
 	reconnect() {
 		let interval = this.retryInterval();
 		this.reconnectInterval = setTimeout(this.reconnect.bind(this), interval);
@@ -90,21 +92,21 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Destroy the websocket connection
-	 */
+	* Destroy the websocket connection
+	*/
 	destroy() {
-		if (this.ws) {
+		if(this.ws) {
 			this.ws.removeListener('close', this.disconnectHandler);
 			this.ws.close();
 		}
 	}
 
 	/**
-	 * Called when the websocket is open
-	 * @private
-	 */
+	* Called when the websocket is open
+	* @private
+	*/
 	ready() {
-		if (this.reconnectInterval) {
+		if(this.reconnectInterval) {
 			clearTimeout(this.reconnectInterval);
 			this.reconnectInterval = null;
 		}
@@ -115,43 +117,43 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Called when the websocket disconnects
-	 * @private
-	 */
+	* Called when the websocket disconnects
+	* @private
+	*/
 	disconnected() {
 		this.connected = false;
-		if (!this.reconnectInterval) {
+		if(!this.reconnectInterval) {
 			this.emit('disconnect');
 		}
 
 		delete this.ws;
 
-		if (!this.reconnectInterval) {
+		if(!this.reconnectInterval) {
 			this.reconnectInterval = setTimeout(this.reconnect.bind(this), this.reconnectTimeout);
 		}
 	}
 
 	/**
-	 * Get the retry interval
-	 * @private
-	 */
+	* Get the retry interval
+	* @private
+	*/
 	retryInterval() {
-		let retries = Math.min(this.retries-1, 5);
+		let retries = Math.min(this.retries - 1, 5);
 		return Math.pow(retries + 5, 2) * 1000;
 	}
 
 	/**
-	 * Send data to Lavalink
-	 * @param {string} op Op name
-	 * @param {*} data Data to send
-	 */
+	* Send data to Lavalink
+	* @param {string} op Op name
+	* @param {*} data Data to send
+	*/
 	send(data) {
 		const ws = this.ws;
-		if (!ws) return;
+		if(!ws) return;
 
 		try {
 			var payload = JSON.stringify(data);
-		} catch (err) {
+		} catch(err) {
 			return this.emit('error', 'Unable to stringify payload.');
 		}
 
@@ -159,18 +161,18 @@ class Lavalink extends EventEmitter {
 	}
 
 	/**
-	 * Handle message from the server
-	 * @param {string} message Raw websocket message
-	 * @private
-	 */
+	* Handle message from the server
+	* @param {string} message Raw websocket message
+	* @private
+	*/
 	onMessage(message) {
 		try {
 			var data = JSON.parse(message);
-		} catch (e) {
+		} catch(e) {
 			return this.emit('error', 'Unable to parse ws message.');
 		}
 
-		if (data.op && data.op === 'stats') {
+		if(data.op && data.op === 'stats') {
 			this.stats = data;
 		}
 

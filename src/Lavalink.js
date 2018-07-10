@@ -6,7 +6,7 @@ var EventEmitter;
 
 try {
 	EventEmitter = require('eventemitter3');
-} catch (err) {
+} catch(err) {
 	EventEmitter = require('events').EventEmitter;
 }
 
@@ -16,6 +16,7 @@ try {
  * @prop {string} host The hostname for the node
  * @prop {number} port The port number for the node
  * @prop {string} address The full ws address for the node
+ * @prop {boolean} secure Whether or not the websocket is secure
  * @prop {string} region The region for this node
  * @prop {string} userId The client user id
  * @prop {number} numShards The total number of shards the bot is running
@@ -30,6 +31,7 @@ class Lavalink extends EventEmitter {
 	 * @param {Object} options Lavalink node options
 	 * @param {string} options.host The hostname to connect to
      * @param {string} options.port The port to connect with
+	 * @prop {boolean} secure Whether or not to connect with wss
      * @param {string} options.region The region of the node
      * @param {number} options.numShards The number of shards the bot is running
      * @param {string} options.userId The user id of the bot
@@ -41,7 +43,8 @@ class Lavalink extends EventEmitter {
 
 		this.host = options.host;
 		this.port = options.port || 80;
-		this.address = `ws://${this.host}:${this.port}`;
+		this.secure = !!options.secure;
+		this.address = `ws${this.secure ? 's' : ''}://${this.host}:${this.port}`;
 		this.region = options.region || null;
 		this.userId = options.userId;
 		this.numShards = options.numShards;
@@ -64,7 +67,7 @@ class Lavalink extends EventEmitter {
 	connect() {
 		this.ws = new WebSocket(this.address, {
 			headers: {
-				'Authorization': this.password,
+				Authorization: this.password,
 				'Num-Shards': this.numShards,
 				'User-Id': this.userId,
 			},
@@ -93,7 +96,7 @@ class Lavalink extends EventEmitter {
 	 * Destroy the websocket connection
 	 */
 	destroy() {
-		if (this.ws) {
+		if(this.ws) {
 			this.ws.removeListener('close', this.disconnectHandler);
 			this.ws.close();
 		}
@@ -104,7 +107,7 @@ class Lavalink extends EventEmitter {
 	 * @private
 	 */
 	ready() {
-		if (this.reconnectInterval) {
+		if(this.reconnectInterval) {
 			clearTimeout(this.reconnectInterval);
 			this.reconnectInterval = null;
 		}
@@ -120,13 +123,13 @@ class Lavalink extends EventEmitter {
 	 */
 	disconnected() {
 		this.connected = false;
-		if (!this.reconnectInterval) {
+		if(!this.reconnectInterval) {
 			this.emit('disconnect');
 		}
 
 		delete this.ws;
 
-		if (!this.reconnectInterval) {
+		if(!this.reconnectInterval) {
 			this.reconnectInterval = setTimeout(this.reconnect.bind(this), this.reconnectTimeout);
 		}
 	}
@@ -136,7 +139,7 @@ class Lavalink extends EventEmitter {
 	 * @private
 	 */
 	retryInterval() {
-		let retries = Math.min(this.retries-1, 5);
+		let retries = Math.min(this.retries - 1, 5);
 		return Math.pow(retries + 5, 2) * 1000;
 	}
 
@@ -147,11 +150,11 @@ class Lavalink extends EventEmitter {
 	 */
 	send(data) {
 		const ws = this.ws;
-		if (!ws) return;
+		if(!ws) return;
 
 		try {
 			var payload = JSON.stringify(data);
-		} catch (err) {
+		} catch(err) {
 			return this.emit('error', 'Unable to stringify payload.');
 		}
 
@@ -166,11 +169,11 @@ class Lavalink extends EventEmitter {
 	onMessage(message) {
 		try {
 			var data = JSON.parse(message);
-		} catch (e) {
+		} catch(e) {
 			return this.emit('error', 'Unable to parse ws message.');
 		}
 
-		if (data.op && data.op === 'stats') {
+		if(data.op && data.op === 'stats') {
 			this.stats = data;
 		}
 

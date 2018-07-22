@@ -70,6 +70,7 @@ class PlayerManager extends Collection {
         let node = new Lavalink({
             host: options.host,
             port: options.port,
+            secure: options.secure,
             region: options.region,
             numShards: options.numShards,
             userId: options.userId,

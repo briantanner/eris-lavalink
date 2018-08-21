@@ -267,8 +267,15 @@ class PlayerManager extends Collection {
             return Promise.resolve(player);
         }
 
-        let region = this.getRegionFromData(options.region || 'us');
-        let node = await this.findIdealNode(region);
+        let region, node;
+
+        if(options.node) {
+            node = this.nodes.get(options.node);
+            region = node.region;
+        } else {
+            region = this.getRegionFromData(options.region || 'us');
+            node = await this.findIdealNode(region);
+        }
 
         if (!node) {
             return Promise.reject('No available voice nodes.');

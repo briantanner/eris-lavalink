@@ -243,6 +243,21 @@ class Player extends EventEmitter {
         });
     }
 
+    setEQ(options) {
+        this.node.send({
+            op: 'equalizer',
+            guildId: this.guildId,
+            bands: options,
+        });
+    }
+
+    destroy() {
+        this.node.send({
+            op: 'equalizer',
+            guildId: this.guildId
+        });
+    }
+
     /**
      * Called on track end
      * @param {Object} message The end reason

@@ -247,7 +247,7 @@ class Player extends EventEmitter {
         this.node.send({
             op: 'equalizer',
             guildId: this.guildId,
-            bands: [options],
+            bands: options,
         });
     }
 

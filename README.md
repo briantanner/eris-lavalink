@@ -11,7 +11,7 @@ A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://g
 ## Install
 ```
 # Lavalink v2 and v3
-npm install vertbot-eris-lavalink
+npm install eris-lavalink
 
 # Lavalink v1
 npm install eris-lavalink@^0.1.3

@@ -1,4 +1,4 @@
-# eris-lavalink
+# vertbot-eris-lavalink
 
 A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://github.com/abalabahaha/eris)
 
@@ -10,12 +10,42 @@ A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://g
 
 ## Install
 ```
-# Lavalink v2
-npm install eris-lavalink
+# Lavalink v2 and v3
+npm install vertbot-eris-lavalink
 
 # Lavalink v1
 npm install eris-lavalink@^0.1.3
 ```
+
+## Changes and why this exist
+
+Currently this adds support for the new Lavalink v3 features such as EQ and destroying the player.
+
+Here is how you use the features:
+```js
+//EQ support:
+
+var bands = [
+	{
+		"band": 0,
+		"gain": 0.25
+	}
+];
+player.setEQ(bands);
+
+//The setEQ function takes a json array that contains objects for each band. The bands range from 0 to 15 and the gain ranges from -0.25 to 1, 0 is the default gain.
+
+//Destroying the player:
+
+player.destroy();
+
+/*
+From the Lavalink docs:
+"Tell the server to potentially disconnect from the voice server and potentially remove the player with all its data. This is useful if you want to move to a new node for a voice connection. Calling this op does not affect voice state, and you can send the same VOICE_SERVER_UPDATE to a new node."
+*/
+```
+
+This exist so I can have my features implemented into a npm package for use with my discord bot, and all the changes I do make will also be made into a pull request for the main project.
 
 ## Implementation
 
@@ -130,6 +160,6 @@ getPlayer(channel).then(player => {
 })
 ```
 
-**A note on pauses** 
+**A note on pauses**
 
 When you pause a player, the player will be kept in a paused state until you explicitly call resume or the player is disconnected. Calls to `play` and `stop` won't clear the pause state. `player.paused` can be used to check if the player is in paused state.

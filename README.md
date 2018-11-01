@@ -10,11 +10,36 @@ A [Lavalink](https://github.com/Frederikam/Lavalink) client for [eris](https://g
 
 ## Install
 ```
-# Lavalink v2
+# Lavalink v2 and v3
 npm install eris-lavalink
 
 # Lavalink v1
 npm install eris-lavalink@^0.1.3
+```
+
+## New Features
+
+```js
+//EQ support:
+
+var bands = [
+	{
+		"band": 0,
+		"gain": 0.25
+	}
+];
+player.setEQ(bands);
+
+//The setEQ function takes a json array that contains objects for each band. The bands range from 0 to 15 and the gain ranges from -0.25 to 1, 0 is the default gain.
+
+//Destroying the player:
+
+player.destroy();
+
+/*
+From the Lavalink docs:
+"Tell the server to potentially disconnect from the voice server and potentially remove the player with all its data. This is useful if you want to move to a new node for a voice connection. Calling this op does not affect voice state, and you can send the same VOICE_SERVER_UPDATE to a new node."
+*/
 ```
 
 ## Implementation
@@ -130,6 +155,6 @@ getPlayer(channel).then(player => {
 })
 ```
 
-**A note on pauses** 
+**A note on pauses**
 
 When you pause a player, the player will be kept in a paused state until you explicitly call resume or the player is disconnected. Calls to `play` and `stop` won't clear the pause state. `player.paused` can be used to check if the player is in paused state.

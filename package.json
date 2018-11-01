@@ -1,19 +1,19 @@
 {
-  "name": "vertbot-eris-lavalink",
-  "version": "1.0.0",
+  "name": "eris-lavalink",
+  "version": "1.0.2",
   "license": "MIT",
-  "description": "A Lavalink client for eris modified for my personal needs",
-  "homepage": "https://github.com/Kaydax/vertbot-eris-lavalink",
+  "description": "A Lavalink client for eris",
+  "homepage": "https://github.com/briantanner/eris-lavalink",
   "author": {
-    "name": "Kaydax",
-    "email": "kaydax@kaydax.xyz"
+    "name": "Brian Tanner",
+    "email": "brian@tanner.io"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Kaydax/vertbot-eris-lavalink.git"
+    "url": "https://github.com/briantanner/eris-lavalink.git"
   },
   "bugs": {
-    "url": "https://github.com/Kaydax/vertbot-eris-lavalink/issues"
+    "url": "https://github.com/briantanner/eris-lavalink/issues"
   },
   "main": "src/index.js",
   "engineStrict": true,
